@@ -1,0 +1,124 @@
+// Loads photos.json (written by build_index.py) and builds the lookups the pages need.
+import { createContext, useContext } from 'react'
+
+/** How sure we are a bib read belongs to the runner (see build_index.py). */
+export type Confidence = 0 | 1 | 2
+
+// The compact shapes stored in photos.json
+interface RawPhoto {
+  id: string
+  a: number
+  s: string
+  k: string
+  ok: string
+  w: number
+  h: number
+  t: number
+  r?: 1
+  b?: [string, Confidence][]
+}
+interface RawIndex {
+  generated: string
+  owner: string
+  albums: { id: string; title: string; label: string }[]
+  runners: Runner[]
+  photos: RawPhoto[]
+}
+
+export interface Album {
+  index: number
+  id: string
+  title: string
+  label: string
+  photos: Photo[] // in time order
+}
+export interface Runner {
+  bib: string
+  name: string
+  club: string | null
+  time: string
+  pos: number
+}
+export interface Photo {
+  id: string
+  album: Album
+  /** Position in album.photos */
+  position: number
+  server: string
+  secret: string
+  originalSecret: string
+  width: number
+  height: number
+  /** Seconds since the race start, by the camera's clock */
+  time: number
+  /** Whether the bib reader has looked at this photo yet */
+  processed: boolean
+  bibs: { bib: string; confidence: Confidence }[]
+}
+export interface PhotoIndex {
+  generated: Date
+  owner: string
+  albums: Album[]
+  photos: Map<string, Photo>
+  runners: Map<string, Runner>
+  /** Every bib read in any photo, with the photos it was read in */
+  photosByBib: Map<string, Photo[]>
+  processedCount: number
+}
+
+export async function loadIndex(): Promise<PhotoIndex> {
+  const resp = await fetch('./data/photos.json')
+  if (!resp.ok) throw new Error(`Could not load the photo index (${resp.status})`)
+  const raw: RawIndex = await resp.json()
+
+  const albums: Album[] = raw.albums.map((a, index) => ({ ...a, index, photos: [] }))
+  const photos = new Map<string, Photo>()
+  const photosByBib = new Map<string, Photo[]>()
+  let processedCount = 0
+  for (const p of raw.photos) {
+    const album = albums[p.a]
+    const photo: Photo = {
+      id: p.id,
+      album,
+      position: album.photos.length,
+      server: p.s,
+      secret: p.k,
+      originalSecret: p.ok,
+      width: p.w,
+      height: p.h,
+      time: p.t,
+      processed: p.r === 1,
+      bibs: (p.b ?? []).map(([bib, confidence]) => ({ bib, confidence })),
+    }
+    album.photos.push(photo)
+    photos.set(photo.id, photo)
+    if (photo.processed) processedCount++
+    for (const { bib } of photo.bibs) {
+      const list = photosByBib.get(bib) ?? []
+      list.push(photo)
+      photosByBib.set(bib, list)
+    }
+  }
+
+  return {
+    generated: new Date(raw.generated),
+    owner: raw.owner,
+    albums,
+    photos,
+    runners: new Map(raw.runners.map((r) => [r.bib, r])),
+    photosByBib,
+    processedCount,
+  }
+}
+
+export const IndexContext = createContext<PhotoIndex | null>(null)
+
+export function useIndex(): PhotoIndex {
+  const index = useContext(IndexContext)
+  if (!index) throw new Error('useIndex used outside IndexContext')
+  return index
+}
+
+export function confidenceFor(photo: Photo, bib: string): Confidence {
+  return photo.bibs.find((b) => b.bib === bib)?.confidence ?? 0
+}

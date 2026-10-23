@@ -1,0 +1,4 @@
+# Downloaded photos (~6 GB) and working data: only site/public/data/photos.json is published
+photos/
+*.csv
+__pycache__/
