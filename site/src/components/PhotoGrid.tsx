@@ -31,7 +31,7 @@ export function PhotoGrid({ photos, bib, highlight, showBibs = false }: Props) {
               <span className="thumb-label">
                 <span>
                   {photo.bibs
-                    .filter((b) => b.confidence > 0)
+                    .filter((b) => b.confidence >= 2) // partial matches can list several runners for one bib
                     .map((b) => (
                       <span key={b.bib} className="mini-bib">
                         {b.bib}

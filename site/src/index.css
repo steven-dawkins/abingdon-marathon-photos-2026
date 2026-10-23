@@ -443,7 +443,8 @@ main.wrap {
   font-size: 0.8rem;
 }
 
-.confidence.c1 {
+.confidence.c1,
+.confidence.c2 {
   color: var(--warn);
 }
 

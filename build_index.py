@@ -9,12 +9,15 @@ fetch_results.py, and writes one compact JSON file for the front end. Re-run it 
 read_bibs.py has processed more photos. Photos not processed yet are still included, without bibs.
 
 Each bib read gets a confidence level:
-    2  the number is a finisher's and the first name read off the bib matches theirs
-    1  the number is a finisher's, but no name was read or it doesn't match
+    3  the number is a finisher's and the first name read off the bib matches theirs
+    2  the number is a finisher's, but no name was read or it doesn't match
+    1  the number read is part of a finisher's number and the name matches theirs: the bib was
+       partly hidden (e.g. "14 SARAH" -> 1425 when 1425 is Sarah)
     0  the number isn't any finisher's (a misread, or a runner who didn't finish)
 A number with a non-matching name is replaced by a finisher one digit away whose first name
 does match, when exactly one such finisher exists (e.g. "145 SARAH" -> 146 when 146 is Sarah),
-with confidence 1.
+with confidence 2. Otherwise every finisher (up to MAX_PARTIAL) whose number contains the
+number read, or is one digit away from it, and whose first name matches is added with confidence 1.
 """
 
 import argparse
@@ -29,6 +32,7 @@ import requests
 from download_album import API_URL, DEFAULT_ALBUMS, HEADERS, get_with_retry, resolve_album
 
 RACE_START = datetime(2026, 10, 18, 9, 0, 0)  # local time, as in results.csv and the camera clocks
+MAX_PARTIAL = 4  # more finishers than this matching a partial number and name is too vague to list
 # Course order of the albums, matched against the album titles
 COURSE_ORDER = ["Start", "Mile 5", "Miles 11 & 19.5", "Mile 24", "Mile 26 (track)",
                 "Finish a", "Finish b", "Finish c"]
@@ -88,20 +92,29 @@ def one_digit_away(a, b):
 def score_bibs(bibs, names, finishers):
     """Return [[bib, confidence], ...] for one photo, correcting misread numbers where possible."""
     scored = {}
+
+    def add(bib, conf):
+        scored[bib] = max(conf, scored.get(bib, 0))
+
     for bib, name in zip(bibs, names):
         official = finishers.get(bib)
         if official and same_name(name, official):
-            conf = 2
-        elif name:
+            add(bib, 3)
+            continue
+        if name:
             # The name doesn't match: try a finisher one digit away with this first name
             near = [b for b, n in finishers.items() if one_digit_away(bib, b) and same_name(name, n)]
             if len(near) == 1:
-                bib, conf = near[0], 1  # probably right, but common names make it a guess
-            else:
-                conf = 1 if official else 0
-        else:
-            conf = 1 if official else 0
-        scored[bib] = max(conf, scored.get(bib, 0))
+                add(near[0], 2)  # probably right, but common names make it a guess
+                continue
+            # Or a partly hidden bib: finishers whose number contains the digits read. Several
+            # finishers one digit away are weaker candidates too
+            partial = {b for b, n in finishers.items() if bib in b and b != bib and same_name(name, n)}
+            partial.update(near)
+            if len(partial) <= MAX_PARTIAL:
+                for b in partial:
+                    add(b, 1)
+        add(bib, 2 if official else 0)
     return [[b, c] for b, c in scored.items()]
 
 
@@ -176,10 +189,12 @@ def main():
     out.write_text(json.dumps(index, separators=(",", ":"), ensure_ascii=False), encoding="utf-8")
 
     processed = sum(1 for p in photos if p.get("r"))
-    found = {b for p in photos for b, c in p.get("b", []) if c >= 1}
-    confident = sum(1 for p in photos for _, c in p.get("b", []) if c == 2)
+    found = {b for p in photos for b, c in p.get("b", []) if c >= 2}
+    confident = sum(1 for p in photos for _, c in p.get("b", []) if c == 3)
+    partial = sum(1 for p in photos for _, c in p.get("b", []) if c == 1)
     print(f"Wrote {out} ({out.stat().st_size / 1e6:.1f} MB): {len(photos)} photos, {processed} processed, "
-          f"{confident} confident bib matches, {len(found)} of {len(runners)} finishers have a photo")
+          f"{confident} confident bib matches, {partial} partial-number matches, "
+          f"{len(found)} of {len(runners)} finishers have a photo")
 
 
 if __name__ == "__main__":

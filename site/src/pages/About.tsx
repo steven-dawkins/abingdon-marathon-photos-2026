@@ -31,6 +31,10 @@ export function About() {
           <strong>Possibly you</strong>: the number is a finisher's but the name couldn't be read or didn't match, or the number
           was probably misread and is the closest finisher with that first name.
         </li>
+        <li>
+          <strong>Number partly hidden</strong>: only part of the number could be read (e.g. 14 for 1425), but the
+          first name matches. These are the least certain, as other runners may share the name.
+        </li>
       </ul>
       <p>
         Bibs that are hidden, turned away or blurred can't be read, so you may be in more photos than are listed.

@@ -83,7 +83,8 @@ interface Photo {
   w: number; h: number;              // original size (layout without reflow, and the download label)
   t: number;                         // time taken, seconds since race start (camera clock, see risks)
   r?: 1;                             // checked by read_bibs.py (even if no bibs were found)
-  b?: [bib: string, conf: 0 | 1 | 2][];  // bibs read; 2 = name matches, 1 = finisher's bib or corrected, 0 = unknown bib
+  b?: [bib: string, conf: 0 | 1 | 2 | 3][];  // bibs read; 3 = number + name match, 2 = finisher's number or corrected,
+                                            // 1 = name matches, number read is part of theirs, 0 = unknown number
 }
 ```
 

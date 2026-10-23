@@ -1,8 +1,11 @@
 // Loads photos.json (written by build_index.py) and builds the lookups the pages need.
 import { createContext, useContext } from 'react'
 
-/** How sure we are a bib read belongs to the runner (see build_index.py). */
-export type Confidence = 0 | 1 | 2
+/**
+ * How sure we are a bib read belongs to the runner (see build_index.py): 3 number and name match,
+ * 2 number matches, 1 name matches part of the number, 0 number isn't a finisher's.
+ */
+export type Confidence = 0 | 1 | 2 | 3
 
 // The compact shapes stored in photos.json
 interface RawPhoto {

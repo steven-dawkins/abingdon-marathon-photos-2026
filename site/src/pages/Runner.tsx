@@ -30,8 +30,11 @@ export function RunnerPage() {
   const index = useIndex()
   const runner = index.runners.get(bib)
   const photos = [...(index.photosByBib.get(bib) ?? [])].sort((a, b) => a.album.index - b.album.index || a.time - b.time)
-  const confident = photos.filter((p) => confidenceFor(p, bib) === 2)
-  const possible = photos.filter((p) => confidenceFor(p, bib) < 2)
+  const confident = photos.filter((p) => confidenceFor(p, bib) === 3)
+  // A bib that isn't a finisher's (confidence 0) only has possible matches
+  const possible = photos.filter((p) => [0, 2].includes(confidenceFor(p, bib)))
+  const partial = photos.filter((p) => confidenceFor(p, bib) === 1)
+  const unsure = possible.length + partial.length
 
   return (
     <>
@@ -53,13 +56,14 @@ export function RunnerPage() {
       {photos.length > 0 && (
         <div className="actions">
           {confident.length > 0 && (
-            <DownloadAllButton photos={confident} bib={bib} label={`Download ${confident.length} photos (zip)`} />
+            <DownloadAllButton photos={confident} bib={bib} label={`Download ${photoCount(confident.length)} (zip)`} />
           )}
-          {possible.length > 0 && confident.length > 0 && (
-            <DownloadAllButton photos={photos} bib={bib} label={`Download all ${photos.length}, including possible`} />
-          )}
-          {possible.length > 0 && confident.length === 0 && (
-            <DownloadAllButton photos={possible} bib={bib} label={`Download ${possible.length} photos (zip)`} />
+          {unsure > 0 && (
+            <DownloadAllButton
+              photos={photos}
+              bib={bib}
+              label={confident.length ? `Download all ${photos.length}, including possible` : `Download ${photoCount(photos.length)} (zip)`}
+            />
           )}
           <ShareButton title={`${runner?.name ?? `Bib ${bib}`}: Abingdon Marathon 2026 photos`} />
           <a className="button" href={reportUrl({ bib })} target="_blank" rel="noreferrer">
@@ -75,10 +79,21 @@ export function RunnerPage() {
           <h2>{confident.length ? 'Possibly you' : 'Possible matches'}</h2>
           <p className="note">
             {runner
-              ? "Your number was read in these photos, but the name on the bib couldn't be read or didn't match."
+              ? "Your number (or one very like it) was read in these photos, but the name on the bib couldn't be read or didn't match."
               : 'This number was read in these photos.'}
           </p>
           <PhotoGroups photos={possible} bib={bib} />
+        </>
+      )}
+
+      {partial.length > 0 && (
+        <>
+          <h2>Number partly hidden</h2>
+          <p className="note">
+            Your first name was read in these photos with only part of a race number (e.g. 14 for 1425), so they may
+            be of someone else with the same name.
+          </p>
+          <PhotoGroups photos={partial} bib={bib} />
         </>
       )}
 
@@ -121,6 +136,8 @@ function ShareButton({ title }: { title: string }) {
     </button>
   )
 }
+
+const photoCount = (n: number) => `${n} photo${n === 1 ? '' : 's'}`
 
 function ordinal(n: number): string {
   const suffix = n % 100 >= 11 && n % 100 <= 13 ? 'th' : ['th', 'st', 'nd', 'rd'][n % 10] ?? 'th'

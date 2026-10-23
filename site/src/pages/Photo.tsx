@@ -7,7 +7,7 @@ import { imageUrl, photoPageUrl } from '../flickr'
 import { formatClock } from '../time'
 
 // Only uncertain matches get a label: a plain listing is the normal case
-const CONFIDENCE_LABEL = ['number not in results', 'possible match', '']
+const CONFIDENCE_LABEL = ['number not in results', 'number partly hidden', 'possible match', '']
 
 export function PhotoPage() {
   const { id = '' } = useParams()
