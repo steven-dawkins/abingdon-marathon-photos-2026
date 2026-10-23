@@ -126,6 +126,17 @@ def cool_down(max_temp, resume_temp):
     return paused
 
 
+def taken_at(path):
+    """Time the photo was taken (HH:MM:SS, camera clock) from its EXIF, or "" if it has none."""
+    try:
+        with Image.open(path) as im:
+            exif = im.getexif()
+            stamp = exif.get_ifd(0x8769).get(36867) or exif.get(306)  # DateTimeOriginal, else DateTime
+        return str(stamp).split(" ")[1] if stamp else ""
+    except (OSError, IndexError):
+        return ""
+
+
 def load_photos(photos_dir):
     """Yield manifest rows (plus album folder) for every downloaded photo."""
     for manifest in sorted(photos_dir.glob("*/manifest.csv")):
@@ -216,7 +227,9 @@ def main():
             f.flush()
             eta = (time.time() - started) / i * (len(todo) - i) / 3600
             summary = ", ".join(f"{b} {n}".strip() for b, n in found.items()) or "none"
-            print(f"[{i}/{len(todo)}] {row['album']}/{path.name}: {summary} ({secs:.1f}s, ~{eta:.1f}h left)")
+            taken = taken_at(path)
+            print(f"[{i}/{len(todo)}] {row['album']}/{path.name}{f' @ {taken}' if taken else ''}: "
+                  f"{summary} ({secs:.1f}s, ~{eta:.1f}h left)")
             if args.rest:
                 time.sleep(args.rest)
 
