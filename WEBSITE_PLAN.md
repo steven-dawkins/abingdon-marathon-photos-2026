@@ -179,9 +179,10 @@ abingdon_marathon_photos/
 - **Bib reading is only ~5% done** (675 of 14,470 photos). The site goes live anyway and the
   home page shows how many photos have been processed so far, so a runner with no matches yet
   knows to come back (or browse the albums).
-- **Camera clocks:** a photo in "Miles 11 & 19.5" is timestamped 09:40:59. The race started at
-  09:00:00, and nobody reaches mile 11 in 41 minutes, so at least that camera's clock is off.
-  Times are only used within an album until offsets are calibrated (Phase 4).
+- **Camera clocks:** not checked yet. Some photos before the leaders could arrive are expected
+  (e.g. 09:40 at Mile 11 shows the water station team), so early timestamps alone don't mean a
+  clock is wrong. Matching runners' finish times against the finish albums will show whether any
+  camera is off. Until then, times are only used within an album (Phase 4).
 - If a photographer replaces or re-uploads photos on Flickr, their secrets change and the
   links break: re-run `build_index.py`.
 - The Flickr site key `download_album.py` scrapes is only used at build time. It is never
