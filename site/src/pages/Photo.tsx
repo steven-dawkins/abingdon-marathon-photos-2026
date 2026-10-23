@@ -6,7 +6,8 @@ import { useIndex } from '../data'
 import { imageUrl, photoPageUrl } from '../flickr'
 import { formatClock } from '../time'
 
-const CONFIDENCE_LABEL = ['number not in results', 'unconfirmed', 'confirmed']
+// Only uncertain matches get a label: a plain listing is the normal case
+const CONFIDENCE_LABEL = ['number not in results', 'possible match', '']
 
 export function PhotoPage() {
   const { id = '' } = useParams()
@@ -95,7 +96,9 @@ export function PhotoPage() {
               <Link to={`/bib/${b}`}>
                 <span className="bib-tag">{b}</span> {index.runners.get(b)?.name ?? ''}
               </Link>{' '}
-              <small className={`confidence c${confidence}`}>{CONFIDENCE_LABEL[confidence]}</small>
+              {CONFIDENCE_LABEL[confidence] && (
+                <small className={`confidence c${confidence}`}>{CONFIDENCE_LABEL[confidence]}</small>
+              )}
             </li>
           ))}
         </ul>

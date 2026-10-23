@@ -75,7 +75,7 @@ export function RunnerPage() {
           <h2>{confident.length ? 'Possibly you' : 'Possible matches'}</h2>
           <p className="note">
             {runner
-              ? "Your number was read in these photos, but the name on the bib couldn't be confirmed."
+              ? "Your number was read in these photos, but the name on the bib couldn't be read or didn't match."
               : 'This number was read in these photos.'}
           </p>
           <PhotoGroups photos={possible} bib={bib} />

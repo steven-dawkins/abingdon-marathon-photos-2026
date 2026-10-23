@@ -25,10 +25,10 @@ export function About() {
       </p>
       <ul>
         <li>
-          <strong>Confirmed</strong>: the number is a finisher's and the first name on the bib matches theirs.
+          <strong>Your photos</strong>: the number is a finisher's and the first name on the bib matches theirs.
         </li>
         <li>
-          <strong>Possibly you</strong>: the number is a finisher's but the name couldn't be confirmed, or the number
+          <strong>Possibly you</strong>: the number is a finisher's but the name couldn't be read or didn't match, or the number
           was probably misread and is the closest finisher with that first name.
         </li>
       </ul>
