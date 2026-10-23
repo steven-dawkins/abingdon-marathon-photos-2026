@@ -381,7 +381,7 @@ main.wrap {
 .photo-grid a {
   display: block;
   aspect-ratio: 3 / 2;
-  background: var(--surface);
+  background: #2a2b2d; /* neutral behind portrait photos, in both themes */
   border-radius: 4px;
   overflow: hidden;
 }
@@ -462,4 +462,119 @@ main.wrap {
   display: flex;
   justify-content: space-between;
   margin-top: 2rem;
+}
+
+/* Album browsing */
+.album-toolbar {
+  position: sticky;
+  top: 57px;
+  z-index: 5;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 20px;
+  padding: 8px 0;
+  margin-bottom: 8px;
+  background: var(--bg);
+}
+
+.album-toolbar select {
+  font: inherit;
+  padding: 4px 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  color: var(--text);
+}
+
+.album-toolbar .album-nav {
+  margin: 0;
+  flex: 1;
+  gap: 16px;
+}
+
+.photo-grid a {
+  position: relative;
+}
+
+.thumb-label {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 4px;
+  padding: 3px 4px;
+  font-size: 0.75rem;
+  color: #fff;
+  background: linear-gradient(transparent, rgb(0 0 0 / 0.55));
+  pointer-events: none;
+}
+
+.thumb-label > span {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px;
+}
+
+.mini-bib {
+  padding: 0 4px;
+  border-radius: 3px;
+  background: #fff;
+  color: #111;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+/* About page */
+.prose {
+  max-width: 70ch;
+}
+
+/* Phones */
+@media (max-width: 600px) {
+  .header-inner {
+    gap: 6px;
+  }
+
+  .search.compact {
+    max-width: none;
+  }
+
+  .search-results {
+    min-width: 0;
+  }
+
+  .runner-header {
+    gap: 12px;
+  }
+
+  .bib-tag.large {
+    font-size: 1.4rem;
+  }
+
+  h1 {
+    font-size: 1.4rem;
+  }
+
+  .photo-group .around {
+    margin-left: 0;
+    flex-basis: 100%;
+  }
+
+  /* The header wraps to two rows here, too tall to keep on screen */
+  .site-header {
+    position: static;
+  }
+
+  .album-toolbar {
+    top: 0;
+  }
+
+  .album-toolbar .album-nav {
+    flex-basis: 100%;
+    font-size: 0.9rem;
+  }
 }

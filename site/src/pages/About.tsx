@@ -1,0 +1,70 @@
+import { Link } from 'react-router-dom'
+import { CREDIT, REPO, reportUrl } from '../config'
+import { useIndex } from '../data'
+
+export function About() {
+  const index = useIndex()
+  return (
+    <article className="prose">
+      <h1>About this site</h1>
+      <p>
+        This site helps runners find their photos from the Abingdon Marathon 2026 among the{' '}
+        {index.photos.size.toLocaleString()} official photos on Flickr.
+      </p>
+
+      <h2>Credit</h2>
+      <p>
+        {CREDIT}. Thank you to all the photographers, and to the organisers and volunteers who made the day happen.
+        The photos are shown straight from Flickr: each one links to its Flickr page.
+      </p>
+
+      <h2>How photos are matched</h2>
+      <p>
+        A computer vision model read the race number and first name on every bib it could see. Each number was then
+        checked against the official results:
+      </p>
+      <ul>
+        <li>
+          <strong>Confirmed</strong>: the number is a finisher's and the first name on the bib matches theirs.
+        </li>
+        <li>
+          <strong>Possibly you</strong>: the number is a finisher's but the name couldn't be confirmed, or the number
+          was probably misread and is the closest finisher with that first name.
+        </li>
+      </ul>
+      <p>
+        Bibs that are hidden, turned away or blurred can't be read, so you may be in more photos than are listed.
+        Each place on the course has a <Link to="/">photo album</Link> in time order; “More photos from around then”
+        on your page opens it at the moment you were photographed there.
+      </p>
+      <p>
+        So far {index.processedCount.toLocaleString()} of {index.photos.size.toLocaleString()} photos have been checked,
+        and more are added as they're processed. Last updated {index.generated.toLocaleDateString('en-GB', {
+          day: 'numeric',
+          month: 'long',
+          year: 'numeric',
+        })}.
+      </p>
+
+      <h2>Downloads</h2>
+      <p>
+        Downloads are the full-size originals, straight from Flickr. Flickr limits how many full-size photos one
+        connection can download in an hour (about 85), so a large “Download all” may pause for a while partway through.
+      </p>
+
+      <h2>Something wrong?</h2>
+      <p>
+        If a photo is listed for the wrong runner, or you've found yourself in a photo that isn't listed,{' '}
+        <a href={reportUrl({})} target="_blank" rel="noreferrer">
+          report it on GitHub
+        </a>
+        . The source is at{' '}
+        <a href={`https://github.com/${REPO}`} target="_blank" rel="noreferrer">
+          github.com/{REPO}
+        </a>
+        .
+      </p>
+      <p>Results are from the official ChronoTrack results.</p>
+    </article>
+  )
+}

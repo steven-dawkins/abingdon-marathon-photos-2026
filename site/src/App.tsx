@@ -7,6 +7,7 @@ import { Home } from './pages/Home'
 import { RunnerPage } from './pages/Runner'
 import { PhotoPage } from './pages/Photo'
 import { AlbumPage } from './pages/Album'
+import { About } from './pages/About'
 
 function ScrollToTop() {
   const { pathname } = useLocation()
@@ -37,7 +38,7 @@ function Layout({ children }: { children: React.ReactNode }) {
             <a href={reportUrl({})} target="_blank" rel="noreferrer">
               Report a wrong or missing photo
             </a>
-            .
+            . <Link to="/about">About this site</Link>
           </p>
         </div>
       </footer>
@@ -63,6 +64,7 @@ export default function App() {
               <Route path="/bib/:bib" element={<RunnerPage />} />
               <Route path="/photo/:id" element={<PhotoPage />} />
               <Route path="/album/:album" element={<AlbumPage />} />
+              <Route path="/about" element={<About />} />
               <Route path="*" element={<p className="empty">Page not found.</p>} />
             </Routes>
           </Layout>

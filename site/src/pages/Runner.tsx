@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { DownloadAllButton } from '../components/DownloadButtons'
 import { PhotoGrid } from '../components/PhotoGrid'
@@ -60,6 +61,7 @@ export function RunnerPage() {
           {possible.length > 0 && confident.length === 0 && (
             <DownloadAllButton photos={possible} bib={bib} label={`Download ${possible.length} photos (zip)`} />
           )}
+          <ShareButton title={`${runner?.name ?? `Bib ${bib}`}: Abingdon Marathon 2026 photos`} />
           <a className="button" href={reportUrl({ bib })} target="_blank" rel="noreferrer">
             Report a wrong or missing photo
           </a>
@@ -97,6 +99,26 @@ export function RunnerPage() {
         </section>
       )}
     </>
+  )
+}
+
+/** The phone's share sheet where there is one, otherwise copy the link. */
+function ShareButton({ title }: { title: string }) {
+  const [copied, setCopied] = useState(false)
+  const share = async () => {
+    const url = window.location.href
+    if (navigator.share) {
+      await navigator.share({ title, url }).catch(() => {})
+    } else {
+      await navigator.clipboard.writeText(url)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    }
+  }
+  return (
+    <button type="button" className="button" onClick={share}>
+      {copied ? 'Link copied' : 'Share'}
+    </button>
   )
 }
 

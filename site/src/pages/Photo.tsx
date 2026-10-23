@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { DownloadPhotoButton } from '../components/DownloadButtons'
 import { reportUrl } from '../config'
@@ -29,6 +29,24 @@ export function PhotoPage() {
     return () => window.removeEventListener('keydown', onKey)
   }, [prev, next, query, navigate])
 
+  // Fetch the neighbouring photos ahead of time so stepping through feels instant
+  useEffect(() => {
+    for (const p of [prev, next]) if (p) new Image().src = imageUrl(p, 'b')
+  }, [prev, next])
+
+  // Swipe left/right on touch screens
+  const touchStart = useRef<{ x: number; y: number } | null>(null)
+  const onTouchEnd = (e: React.TouchEvent) => {
+    const start = touchStart.current
+    touchStart.current = null
+    if (!start) return
+    const dx = e.changedTouches[0].clientX - start.x
+    const dy = e.changedTouches[0].clientY - start.y
+    if (Math.abs(dx) < 50 || Math.abs(dy) > Math.abs(dx)) return
+    const target = dx > 0 ? prev : next
+    if (target) navigate(`/photo/${target.id}${query}`, { replace: true })
+  }
+
   if (!photo) return <p className="empty">Photo not found.</p>
   const flickrUrl = photoPageUrl(index.owner, photo)
 
@@ -40,7 +58,10 @@ export function PhotoPage() {
         <span>{formatClock(photo.time)}</span>
       </nav>
 
-      <figure>
+      <figure
+        onTouchStart={(e) => (touchStart.current = { x: e.touches[0].clientX, y: e.touches[0].clientY })}
+        onTouchEnd={onTouchEnd}
+      >
         <img
           key={photo.id}
           src={imageUrl(photo, 'b')}

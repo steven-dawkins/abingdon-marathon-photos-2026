@@ -1,11 +1,12 @@
-import { useEffect, useState } from 'react'
-import { Link, useParams, useSearchParams } from 'react-router-dom'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { PhotoGrid } from '../components/PhotoGrid'
-import { useIndex, type Album } from '../data'
+import { useIndex, type Album, type Photo } from '../data'
 import { albumPageUrl } from '../flickr'
 import { formatClock } from '../time'
 
 const PAGE = 96
+const SLOT_SECONDS = 5 * 60
 
 /** One album in time order, shown a window at a time, optionally centred on one photo (?at=id). */
 export function AlbumPage() {
@@ -20,43 +21,77 @@ export function AlbumPage() {
 
 function AlbumView({ album, at }: { album: Album; at?: string }) {
   const index = useIndex()
+  const navigate = useNavigate()
   const [range, setRange] = useState(() => initialRange((at && index.photos.get(at)?.position) || 0))
+  const [start, end] = range
+  const photos = album.photos.slice(start, end)
+  const slots = useMemo(() => timeSlots(album.photos), [album])
+  const sentinel = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     // After the layout's scroll-to-top on navigation
     if (at) requestAnimationFrame(() => document.getElementById(`p${at}`)?.scrollIntoView({ block: 'center' }))
   }, [at])
 
-  const [start, end] = range
-  const photos = album.photos.slice(start, end)
+  // Load later photos automatically when the end of the grid scrolls into view
+  useEffect(() => {
+    const el = sentinel.current
+    if (!el) return
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting) setRange(([s, e]) => [s, Math.min(e + PAGE, album.photos.length)])
+      },
+      { rootMargin: '800px' },
+    )
+    observer.observe(el)
+    return () => observer.disconnect()
+  }, [album])
 
   return (
     <>
       <h1>{album.label}</h1>
       <p className="note">
-        {album.photos.length.toLocaleString()} photos in the order they were taken
-        {photos.length > 0 && <>; showing {formatClock(photos[0].time)}–{formatClock(photos[photos.length - 1].time)} by the camera's clock</>}.{' '}
+        {album.photos.length.toLocaleString()} photos in the order they were taken. Times are from the camera's clock.{' '}
         <a href={albumPageUrl(index.owner, album)} target="_blank" rel="noreferrer">
           Album on Flickr
         </a>
       </p>
+
+      <div className="album-toolbar">
+        <label>
+          Jump to{' '}
+          <select
+            value=""
+            onChange={(e) => {
+              const slot = slots.find((s) => s.time === Number(e.target.value))
+              if (slot) navigate(`/album/${album.index}?at=${slot.photo.id}`, { replace: true })
+            }}
+          >
+            <option value="" disabled>
+              a time…
+            </option>
+            {slots.map((s) => (
+              <option key={s.time} value={s.time}>
+                {formatClock(s.time)} ({s.count})
+              </option>
+            ))}
+          </select>
+        </label>
+        <nav className="album-nav">
+          {album.index > 0 && <Link to={`/album/${album.index - 1}`}>← {index.albums[album.index - 1].label}</Link>}
+          {album.index < index.albums.length - 1 && (
+            <Link to={`/album/${album.index + 1}`}>{index.albums[album.index + 1].label} →</Link>
+          )}
+        </nav>
+      </div>
+
       {start > 0 && (
         <button type="button" className="button more" onClick={() => setRange([Math.max(0, start - PAGE), end])}>
           Show earlier photos
         </button>
       )}
-      <PhotoGrid photos={photos} highlight={at} />
-      {end < album.photos.length && (
-        <button type="button" className="button more" onClick={() => setRange([start, end + PAGE])}>
-          Show later photos
-        </button>
-      )}
-      <nav className="album-nav">
-        {album.index > 0 && <Link to={`/album/${album.index - 1}`}>← {index.albums[album.index - 1].label}</Link>}
-        {album.index < index.albums.length - 1 && (
-          <Link to={`/album/${album.index + 1}`}>{index.albums[album.index + 1].label} →</Link>
-        )}
-      </nav>
+      <PhotoGrid photos={photos} highlight={at} showBibs />
+      <div ref={sentinel} />
     </>
   )
 }
@@ -64,4 +99,16 @@ function AlbumView({ album, at }: { album: Album; at?: string }) {
 function initialRange(position: number): [number, number] {
   const start = Math.max(0, position - PAGE / 4)
   return [start, start + PAGE]
+}
+
+/** 5-minute slots that have photos, each with its first photo. */
+function timeSlots(photos: Photo[]) {
+  const slots: { time: number; photo: Photo; count: number }[] = []
+  for (const photo of photos) {
+    const time = Math.floor(photo.time / SLOT_SECONDS) * SLOT_SECONDS
+    const last = slots[slots.length - 1]
+    if (last?.time === time) last.count++
+    else slots.push({ time, photo, count: 1 })
+  }
+  return slots
 }

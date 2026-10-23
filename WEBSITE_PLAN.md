@@ -167,7 +167,9 @@ abingdon_marathon_photos/
 1. **Data:** `build_index.py` and `photos.json` from the photos processed so far. Check the
    sizes and the Flickr URLs.
 2. **App MVP:** search, runner page, photo page, single download, run locally with `npm run dev`.
-3. **Download all + album browsing**, mobile polish, credit/about text.
+3. **Download all + album browsing**, mobile polish, credit/about text. Done: albums load more
+   photos as you scroll, have a "Jump to" time picker and label each thumbnail with its time and
+   the bibs read; swipe and preloading on the photo page; Share button; About page.
 4. **Time-based help (optional):** work out each camera's clock offset from confident
    matches (runner's start/finish time vs. photo time). Then estimate when a runner passed each
    course point and jump straight to that moment in albums where they weren't found.

@@ -37,10 +37,15 @@ export function search(index: PhotoIndex, query: string): SearchResult[] {
   }
 
   const terms = normalise(q).split(/\s+/)
-  const matches: SearchResult[] = []
+  const matches: (SearchResult & { exact: boolean })[] = []
   for (const runner of index.runners.values()) {
     const words = normalise(runner.name).split(/[\s-]+/)
-    if (terms.every((term) => words.some((word) => word.startsWith(term)))) matches.push(result(runner.bib))
+    if (terms.every((term) => words.some((word) => word.startsWith(term)))) {
+      // Whole-word matches first: "matt" ranks Matt Jones above Anne-Marie Mattless
+      matches.push({ ...result(runner.bib), exact: terms.every((term) => words.includes(term)) })
+    }
   }
-  return matches.sort((a, b) => a.name!.localeCompare(b.name!)).slice(0, MAX_RESULTS)
+  return matches
+    .sort((a, b) => Number(b.exact) - Number(a.exact) || a.name!.localeCompare(b.name!))
+    .slice(0, MAX_RESULTS)
 }
