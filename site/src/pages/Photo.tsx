@@ -1,6 +1,7 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { DownloadPhotoButton } from '../components/DownloadButtons'
+import { Lightbox } from '../components/Lightbox'
 import { reportUrl } from '../config'
 import { useIndex } from '../data'
 import { imageUrl, photoPageUrl } from '../flickr'
@@ -19,10 +20,13 @@ export function PhotoPage() {
   const prev = photo && photo.album.photos[photo.position - 1]
   const next = photo && photo.album.photos[photo.position + 1]
   const query = bib ? `?bib=${bib}` : ''
+  // Stays open while stepping through photos
+  const [fullscreen, setFullscreen] = useState(false)
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.target instanceof HTMLInputElement) return
+      if (e.key === 'Escape') setFullscreen(false)
       if (e.key === 'ArrowLeft' && prev) navigate(`/photo/${prev.id}${query}`, { replace: true })
       if (e.key === 'ArrowRight' && next) navigate(`/photo/${next.id}${query}`, { replace: true })
     }
@@ -37,6 +41,9 @@ export function PhotoPage() {
 
   // Swipe left/right on touch screens
   const touchStart = useRef<{ x: number; y: number } | null>(null)
+  const onTouchStart = (e: React.TouchEvent) => {
+    touchStart.current = { x: e.touches[0].clientX, y: e.touches[0].clientY }
+  }
   const onTouchEnd = (e: React.TouchEvent) => {
     const start = touchStart.current
     touchStart.current = null
@@ -59,16 +66,16 @@ export function PhotoPage() {
         <span>{formatClock(photo.time)}</span>
       </nav>
 
-      <figure
-        onTouchStart={(e) => (touchStart.current = { x: e.touches[0].clientX, y: e.touches[0].clientY })}
-        onTouchEnd={onTouchEnd}
-      >
+      <figure onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
         <img
           key={photo.id}
           src={imageUrl(photo, 'b')}
           width={photo.width}
           height={photo.height}
           alt={`Photo at ${photo.album.label}`}
+          className="zoomable"
+          title="Show full size"
+          onClick={() => setFullscreen(true)}
         />
         <div className="prev-next">
           {prev ? <Link to={`/photo/${prev.id}${query}`} replace>← Previous</Link> : <span />}
@@ -85,6 +92,10 @@ export function PhotoPage() {
           Report a problem
         </a>
       </div>
+
+      {fullscreen && (
+        <Lightbox photo={photo} onClose={() => setFullscreen(false)} swipe={{ onTouchStart, onTouchEnd }} />
+      )}
 
       <section className="spotted">
         <h2>Runners in this photo</h2>
