@@ -16,12 +16,18 @@ export function PhotoGrid({ photos, bib, highlight, showBibs = false }: Props) {
   return (
     <ul className="photo-grid">
       {photos.map((photo) => (
-        <li key={photo.id} className={photo.id === highlight ? 'highlight' : undefined} id={`p${photo.id}`}>
+        <li
+          key={photo.id}
+          className={photo.id === highlight ? 'highlight' : undefined}
+          id={`p${photo.id}`}
+          style={{ '--ar': photo.width / photo.height } as React.CSSProperties}
+        >
           <Link to={`/photo/${photo.id}${bib ? `?bib=${bib}` : ''}`} title={`${photo.album.label}, ${formatClock(photo.time)}`}>
             <img
               src={imageUrl(photo, 'n')}
               srcSet={`${imageUrl(photo, 'n')} 320w, ${imageUrl(photo, 'z')} 640w`}
-              sizes="(max-width: 600px) 50vw, 240px"
+              // About the width it gets in a row: see --row-height in index.css
+              sizes={`(max-width: 600px) ${Math.round((photo.width / photo.height) * 140)}px, ${Math.round((photo.width / photo.height) * 220)}px`}
               width={photo.width}
               height={photo.height}
               loading="lazy"

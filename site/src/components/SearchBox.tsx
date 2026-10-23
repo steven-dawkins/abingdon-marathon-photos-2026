@@ -33,7 +33,7 @@ export function SearchBox({ compact = false, autoFocus = false }: { compact?: bo
       <input
         type="search"
         inputMode="search"
-        placeholder={compact ? 'Bib or name' : 'Race number or name, e.g. 559 or Matthew Lock'}
+        placeholder={compact ? 'Bib or name' : 'Race number or name, e.g. 1234 or Jane Smith'}
         aria-label="Search by race number or name"
         aria-controls={listId}
         autoFocus={autoFocus}

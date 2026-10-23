@@ -41,7 +41,7 @@ export function search(index: PhotoIndex, query: string): SearchResult[] {
   for (const runner of index.runners.values()) {
     const words = normalise(runner.name).split(/[\s-]+/)
     if (terms.every((term) => words.some((word) => word.startsWith(term)))) {
-      // Whole-word matches first: "matt" ranks Matt Jones above Anne-Marie Mattless
+      // Whole-word matches first: "jo" ranks Jo Smith above Joanne Brown
       matches.push({ ...result(runner.bib), exact: terms.every((term) => words.includes(term)) })
     }
   }

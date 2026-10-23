@@ -51,7 +51,7 @@ results.csv ─┘                                                     (React + 
 - **Python build step** (`build_index.py`, alongside the existing scripts): re-runnable, and run
   again whenever `read_bibs.py` has processed more photos.
 - **Front end** (`site/`): Vite + React 19 + TypeScript, no UI framework, plain CSS modules.
-  - `HashRouter`, so deep links (`/#/bib/559`) work on GitHub Pages without 404 tricks
+  - `HashRouter`, so deep links (`/#/bib/1234`) work on GitHub Pages without 404 tricks
   - `fflate` to build zips in the browser (smaller and faster than JSZip)
   - Name search with a hand-rolled normalised prefix/substring match (1,013 names is tiny);
     add `fuse.js` only if typo tolerance turns out to matter

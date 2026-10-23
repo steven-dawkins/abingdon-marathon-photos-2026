@@ -11,7 +11,7 @@
   --bad: #a1302a;
   --radius: 8px;
   color-scheme: light dark;
-  font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  font-family: 'Figtree Variable', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
   line-height: 1.5;
   color: var(--text);
   background: var(--bg);
@@ -360,26 +360,40 @@ main.wrap {
   font-size: 0.9rem;
 }
 
-/* Photo grid */
+/* Photo grid: justified rows. Each photo keeps its own shape (--ar, its aspect ratio, set
+   inline) and grows in proportion to it, so every row fills the width at about --row-height */
 .photo-grid {
+  --row-height: 170px;
   list-style: none;
   padding: 0;
   margin: 0;
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  display: flex;
+  flex-wrap: wrap;
   gap: 6px;
 }
 
-@media (max-width: 400px) {
+/* Soaks up the spare space in the last row so its photos aren't stretched */
+.photo-grid::after {
+  content: '';
+  flex-grow: 1000000;
+}
+
+@media (max-width: 600px) {
   .photo-grid {
-    grid-template-columns: repeat(2, 1fr);
+    --row-height: 100px; /* two landscape photos per row on a phone */
+    gap: 4px;
   }
+}
+
+.photo-grid li {
+  flex: var(--ar) 1 calc(var(--ar) * var(--row-height));
+  max-width: calc(var(--ar) * var(--row-height) * 2);
 }
 
 .photo-grid a {
   display: block;
-  aspect-ratio: 3 / 2;
-  background: #2a2b2d; /* neutral behind portrait photos, in both themes */
+  aspect-ratio: var(--ar);
+  background: var(--border);
   border-radius: 4px;
   overflow: hidden;
 }
@@ -387,8 +401,13 @@ main.wrap {
 .photo-grid img {
   width: 100%;
   height: 100%;
-  object-fit: contain;
+  object-fit: cover;
   display: block;
+  transition: transform 0.2s;
+}
+
+.photo-grid a:hover img {
+  transform: scale(1.03);
 }
 
 .photo-grid li.highlight a {
