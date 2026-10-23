@@ -13,6 +13,7 @@ python download_album.py <album url> ... # other public Flickr albums
 python read_bibs.py --limit 50           # quick accuracy/speed check first
 python read_bibs.py                      # full run -> bibs.csv and by_bib.csv
 python read_bibs.py --tiles 2 --out bibs_tiles.csv   # slower close-up pass, see below
+python read_bibs.py --max-temp 70 --resume-temp 60 --rest 3   # run cooler, see Speed
 ```
 Both scripts can be stopped and re-run at any time: photos already downloaded / already in
 `bibs.csv` are skipped. `read_bibs.py` only processes photos that are already downloaded, so it
@@ -107,6 +108,12 @@ Based on about 10 photos per mode that the model hadn't seen before. Repeat runs
 images are much faster because Ollama reuses its earlier work, so don't time with photos that
 have already been processed. The GPU slows down when it gets hot: keep the laptop in the HP
 "Performance" profile and on the charger. The script prints a time-remaining estimate after every photo.
+
+To keep the laptop from running hot for hours, `read_bibs.py` checks the GPU temperature with
+`nvidia-smi` before each photo. Above `--max-temp` (default 75°C) it pauses until the GPU is down
+to `--resume-temp` (default 65°C), giving up waiting after 15 minutes. `--rest N` adds N seconds
+after every photo, so the GPU runs cooler all the time: with photos taking ~4 s, `--rest 4` roughly
+halves the heat and doubles the run time.
 
 ## Notes
 - Changing `--tiles`, the prompt or the model doesn't reprocess photos already in `bibs.csv`.
