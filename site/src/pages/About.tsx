@@ -69,6 +69,16 @@ export function About() {
         .
       </p>
       <p>Results are from the official ChronoTrack results.</p>
+
+      <h2>Privacy</h2>
+      <p>
+        The site counts visits anonymously with{' '}
+        <a href="https://www.goatcounter.com" target="_blank" rel="noreferrer">
+          GoatCounter
+        </a>
+        , which uses no cookies and doesn't track you across sites. It records which pages are viewed and actions such
+        as downloads, not who you are or the names you search for.
+      </p>
     </article>
   )
 }

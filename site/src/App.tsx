@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { HashRouter, Link, Route, Routes, useLocation } from 'react-router-dom'
+import { trackEvent, trackPage } from './analytics'
 import { CREDIT, reportUrl } from './config'
 import { IndexContext, loadIndex, type PhotoIndex } from './data'
 import { SearchBox } from './components/SearchBox'
@@ -9,12 +10,20 @@ import { PhotoPage } from './pages/Photo'
 import { AlbumPage } from './pages/Album'
 import { About } from './pages/About'
 
-function ScrollToTop() {
+/** Scroll to the top and count a page view on every page change. */
+function OnNavigate() {
   const { pathname } = useLocation()
   useEffect(() => {
     window.scrollTo(0, 0)
+    trackPage(pathname)
   }, [pathname])
   return null
+}
+
+// "Report a problem" links appear on several pages: count clicks on any of them in one place
+function countReports(e: MouseEvent) {
+  const link = e.target instanceof Element && e.target.closest('a')
+  if (link && link.href.includes('/issues/new')) trackEvent('report-problem')
 }
 
 function Layout({ children }: { children: React.ReactNode }) {
@@ -52,10 +61,14 @@ export default function App() {
   useEffect(() => {
     loadIndex().then(setIndex, (e: Error) => setError(e.message))
   }, [])
+  useEffect(() => {
+    document.addEventListener('click', countReports)
+    return () => document.removeEventListener('click', countReports)
+  }, [])
 
   return (
     <HashRouter>
-      <ScrollToTop />
+      <OnNavigate />
       {index ? (
         <IndexContext.Provider value={index}>
           <Layout>

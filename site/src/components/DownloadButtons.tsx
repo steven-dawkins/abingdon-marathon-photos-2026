@@ -1,5 +1,6 @@
 import { useRef, useState } from 'react'
 import type { Photo } from '../data'
+import { trackEvent } from '../analytics'
 import { downloadPhoto, downloadZip, type ZipProgress } from '../download'
 
 export function DownloadPhotoButton({ photo, bib }: { photo: Photo; bib?: string }) {
@@ -8,6 +9,7 @@ export function DownloadPhotoButton({ photo, bib }: { photo: Photo; bib?: string
     setState('busy')
     try {
       await downloadPhoto(photo, bib)
+      trackEvent('download-original')
       setState('idle')
     } catch {
       setState('error')
@@ -35,6 +37,7 @@ export function DownloadAllButton({ photos, bib, label }: { photos: Photo[]; bib
     abort.current = new AbortController()
     setError(null)
     try {
+      trackEvent('download-all', `${photos.length} photos`)
       await downloadZip(photos, bib, setProgress, abort.current.signal)
     } catch (e) {
       if (!abort.current.signal.aborted) setError((e as Error).message)

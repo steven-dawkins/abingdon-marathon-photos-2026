@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { DownloadAllButton } from '../components/DownloadButtons'
 import { PhotoGrid } from '../components/PhotoGrid'
+import { trackEvent } from '../analytics'
 import { reportUrl } from '../config'
 import { confidenceFor, useIndex, type Album, type Photo } from '../data'
 
@@ -122,6 +123,7 @@ function ShareButton({ title }: { title: string }) {
   const [copied, setCopied] = useState(false)
   const share = async () => {
     const url = window.location.href
+    trackEvent('share')
     if (navigator.share) {
       await navigator.share({ title, url }).catch(() => {})
     } else {

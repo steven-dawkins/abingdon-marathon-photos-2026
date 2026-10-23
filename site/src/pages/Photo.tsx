@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { DownloadPhotoButton } from '../components/DownloadButtons'
 import { Lightbox } from '../components/Lightbox'
+import { trackEvent } from '../analytics'
 import { reportUrl } from '../config'
 import { useIndex } from '../data'
 import { imageUrl, photoPageUrl } from '../flickr'
@@ -75,7 +76,10 @@ export function PhotoPage() {
           alt={`Photo at ${photo.album.label}`}
           className="zoomable"
           title="Show full size"
-          onClick={() => setFullscreen(true)}
+          onClick={() => {
+            setFullscreen(true)
+            trackEvent('view-full-size')
+          }}
         />
         <div className="prev-next">
           {prev ? <Link to={`/photo/${prev.id}${query}`} replace>← Previous</Link> : <span />}

@@ -1,5 +1,6 @@
 import { useId, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { trackEvent } from '../analytics'
 import { useIndex } from '../data'
 import { search } from '../search'
 
@@ -24,6 +25,8 @@ export function SearchBox({ compact = false, autoFocus = false }: { compact?: bo
       const q = query.trim()
       if (results[active]) go(results[active].bib)
       else if (/^\d+$/.test(q)) go(q)
+      // Record which numbers find nobody (a misread or missing bib), but not names people type
+      if (!results.length && q) trackEvent('search-no-results', /^\d+$/.test(q) ? `bib ${q}` : 'name')
     } else return
     e.preventDefault()
   }
