@@ -66,7 +66,7 @@ export function RunnerPage() {
               label={confident.length ? `Download all ${photos.length}, including possible` : `Download ${photoCount(photos.length)} (zip)`}
             />
           )}
-          <ShareButton title={`${runner?.name ?? `Bib ${bib}`}: Abingdon Marathon 2026 photos`} />
+          <ShareButton bib={bib} title={`${runner?.name ?? `Bib ${bib}`}: Abingdon Marathon 2026 photos`} />
           <a className="button" href={reportUrl({ bib })} target="_blank" rel="noreferrer">
             Report a wrong or missing photo
           </a>
@@ -118,11 +118,15 @@ export function RunnerPage() {
   )
 }
 
-/** The phone's share sheet where there is one, otherwise copy the link. */
-function ShareButton({ title }: { title: string }) {
+/**
+ * The phone's share sheet where there is one, otherwise copy the link. Shares the runner's static
+ * page (made by sharePages.ts) rather than this one: WhatsApp and Facebook can't see past the "#" in
+ * this page's URL, so they'd show the home page's preview instead of the runner's name and photo.
+ */
+function ShareButton({ bib, title }: { bib: string; title: string }) {
   const [copied, setCopied] = useState(false)
   const share = async () => {
-    const url = window.location.href
+    const url = new URL(`bib/${encodeURIComponent(bib)}/`, window.location.href.split('#')[0]).href
     trackEvent('share')
     if (navigator.share) {
       await navigator.share({ title, url }).catch(() => {})
