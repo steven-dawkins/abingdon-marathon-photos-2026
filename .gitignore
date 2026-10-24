@@ -2,3 +2,5 @@
 photos/
 *.csv
 __pycache__/
+# YOLO detector weights, downloaded by read_bibs_2pass.py
+*.pt

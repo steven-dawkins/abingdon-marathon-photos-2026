@@ -30,6 +30,7 @@ from pathlib import Path
 import requests
 
 from download_album import API_URL, DEFAULT_ALBUMS, HEADERS, get_with_retry, resolve_album
+from read_bibs import drop_counting
 
 RACE_START = datetime(2026, 10, 18, 9, 0, 0)  # local time, as in results.csv and the camera clocks
 MAX_PARTIAL = 4  # more finishers than this matching a partial number and name is too vague to list
@@ -125,7 +126,9 @@ def load_bibs(path):
         for row in csv.DictReader(f):
             bibs = row["bibs"].split(";") if row["bibs"] else []
             names = row["names"].split(";") if row["names"] else [""] * len(bibs)
-            found[row["photo_id"]] = (bibs, names)
+            # Also cleans up rows read before read_bibs.py had this filter
+            pairs = drop_counting(list(zip(bibs, names)))
+            found[row["photo_id"]] = ([b for b, _ in pairs], [n for _, n in pairs])
     return found
 
 

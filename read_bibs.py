@@ -34,6 +34,10 @@ DEFAULT_MODEL = "qwen2.5vl:7b"
 FIELDS = ["album", "file", "photo_id", "bibs", "names", "flickr_url", "seconds"]
 COOLDOWN_CHECK = 10  # seconds between temperature checks while paused
 COOLDOWN_MAX = 15 * 60  # carry on after this long even if it hasn't reached --resume-temp
+# Plenty for ~25 runners. The model sometimes gets stuck counting ("1000 DANIEL, 1001 DANIEL, ...")
+# until it fills its context, so this stops it early (and saves ~80s per such photo)
+MAX_ANSWER_TOKENS = 400
+MIN_RUN = 3  # this many numbers in a row going up or down in equal steps, all one name, are the model counting
 
 # Keep the example free of real-looking values: the model copies them into its answer for photos with no bibs
 PROMPT = """Read the race number on every runner's bib in this marathon photo.
@@ -70,30 +74,71 @@ def views(path, max_side, tiles):
         yield to_base64(im.crop(box), max_side)
 
 
-def ask_model(session, image, model):
+def ask_model(session, image, model, prompt=PROMPT):
     resp = session.post(OLLAMA_URL, timeout=600, json={
         "model": model,
-        "messages": [{"role": "user", "content": PROMPT, "images": [image]}],
+        "messages": [{"role": "user", "content": prompt, "images": [image]}],
         "stream": False,
-        "options": {"temperature": 0, "num_ctx": 4096},
+        "options": {"temperature": 0, "num_ctx": 4096, "num_predict": MAX_ANSWER_TOKENS},
     })
     resp.raise_for_status()
     # Ollama's JSON-schema mode makes this model answer "no runners", so parse its free-text JSON instead
     text = resp.json()["message"]["content"]
     match = re.search(r"\{.*\}", text, re.DOTALL)
-    return json.loads(match.group(0)).get("runners", []) if match else []
+    if not match:
+        return []
+    try:
+        return json.loads(match.group(0)).get("runners", [])
+    except json.JSONDecodeError:
+        # Cut off at MAX_ANSWER_TOKENS: keep the runner entries that were completed
+        runners = []
+        for obj in re.findall(r"\{[^{}]*\}", text):
+            try:
+                runners.append(json.loads(obj))
+            except json.JSONDecodeError:
+                pass
+        return runners
+
+
+def drop_counting(pairs):
+    """Drop (bib, name) pairs where the model was counting rather than reading bibs.
+
+    Runs of MIN_RUN or more numbers in equal steps (1000, 1001, 1002, ... or 111, 110, 109, ...
+    or 117, 127, 137, ...) in the order the model gave them, with the same name or none, aren't
+    real bibs. Runners who entered together can have consecutive numbers, but not the same name.
+    """
+    nums = [int(b) if b.isdigit() else None for b, _ in pairs]
+    bad = set()
+    i = 0
+    while i < len(nums) - 1:
+        j = i + 1
+        if None not in (nums[i], nums[j]) and nums[i] != nums[j]:
+            step = nums[j] - nums[i]
+            while j + 1 < len(nums) and nums[j + 1] is not None and nums[j + 1] - nums[j] == step:
+                j += 1
+            names = {n for _, n in pairs[i:j + 1]} - {"", "UNKNOWN"}
+            if j - i + 1 >= MIN_RUN and len(names) <= 1:
+                bad.update(range(i, j + 1))
+        i = j
+    return [p for i, p in enumerate(pairs) if i not in bad]
 
 
 def read_bibs(session, path, model, max_side, tiles):
     found = {}
     for image in views(path, max_side, tiles):
-        for r in ask_model(session, image, model):
-            bib = re.sub(r"\D", "", str(r.get("bib", ""))).lstrip("0")
-            name = str(r.get("name", "")).strip().upper()
+        pairs = [(re.sub(r"\D", "", str(r.get("bib", ""))).lstrip("0"), str(r.get("name", "")).strip().upper())
+                 for r in ask_model(session, image, model) if isinstance(r, dict)]
+        for bib, name in drop_counting(pairs):
+            if name == "UNKNOWN":
+                name = ""
             if bib and (bib not in found or not found[bib]):
                 found[bib] = name
-    # A bib cut off at a strip edge can be misread as a shorter number ("100" for "1008"), so drop a
-    # number that is part of a longer one in the same photo unless it has a different runner's name
+    return drop_partial(found)
+
+
+def drop_partial(found):
+    """A bib cut off at an image edge can be misread as a shorter number ("100" for "1008"), so drop a
+    number that is part of a longer one in the same photo unless it has a different runner's name."""
     return {b: n for b, n in found.items()
             if not any(b != o and b in o and (not n or n == found[o]) for o in found)}
 
@@ -154,7 +199,7 @@ def write_by_bib(results_path, out_path):
         for row in csv.DictReader(f):
             bibs = row["bibs"].split(";") if row["bibs"] else []
             row_names = row["names"].split(";") if row["names"] else [""] * len(bibs)
-            for bib, name in zip(bibs, row_names):
+            for bib, name in drop_counting(list(zip(bibs, row_names))):
                 photos[bib].append(row)
                 if name:
                     names[bib].add(name)
@@ -178,11 +223,11 @@ def main():
                         help="also send N overlapping close-up strips per photo: finds some smaller bibs, "
                              "but ~5x slower and adds more misreads (try 2)")
     parser.add_argument("--limit", type=int, help="only process this many new photos (for testing)")
-    parser.add_argument("--max-temp", type=int, default=75,
+    parser.add_argument("--max-temp", type=int, default=70,
                         help="pause when the GPU gets hotter than this (C, default 75)")
-    parser.add_argument("--resume-temp", type=int, default=65,
+    parser.add_argument("--resume-temp", type=int, default=60,
                         help="after pausing, wait until the GPU has cooled to this (C, default 65)")
-    parser.add_argument("--rest", type=float, default=0,
+    parser.add_argument("--rest", type=float, default=3,
                         help="seconds to pause after every photo, to run cooler overall (default 0)")
     parser.add_argument("--out", default="bibs.csv")
     args = parser.parse_args()
