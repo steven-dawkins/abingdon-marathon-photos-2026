@@ -2,7 +2,7 @@
 
 Usage:
     python read_bibs_2pass.py [photos_dir] [--limit N] [--crop-height PX] [--min-height F] [--url URL]
-                              [--model NAME] [--max-temp C] [--resume-temp C] [--rest SECONDS] [--out bibs_2pass.csv]
+                              [--model NAME] [--workers N] [--max-temp C] [--resume-temp C] [--rest SECONDS] [--out bibs_2pass.csv]
                               [--skip bibs.csv ...]
 
 A small person detector (YOLO, on the CPU so it doesn't compete with the vision model for GPU memory) finds
@@ -29,8 +29,9 @@ Needs: pip install ultralytics (the detector's weights download on first run).
 import argparse
 import csv
 import re
+import threading
 import time
-from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import FIRST_COMPLETED, ThreadPoolExecutor, wait
 from pathlib import Path
 
 import requests
@@ -138,6 +139,10 @@ def main():
                         help="skip runners shorter than this fraction of the photo's height: too far away "
                              "to read (default 0.15)")
     parser.add_argument("--limit", type=int, help="only process this many new photos (for testing)")
+    parser.add_argument("--workers", type=int, default=1,
+                        help="photos sent to the model at once (default 1). The slots share llama-server's "
+                             "-c, so 4 crowded sheets overflow -c 8192. 2 workers were ~1.5x faster "
+                             "between thermal pauses but heat the GPU faster: ~10%% more photos/hour")
     parser.add_argument("--max-temp", type=int, default=70,
                         help="pause when the GPU gets hotter than this (C, default 70)")
     parser.add_argument("--resume-temp", type=int, default=60,
@@ -167,44 +172,70 @@ def main():
           else "Can't read the GPU temperature (nvidia-smi not found): no thermal pauses")
 
     detector = load_detector()
-    session = requests.Session()
+    detector_lock = threading.Lock()  # one detection at a time: it already uses every CPU core
+    model_slots = threading.Semaphore(args.workers)
+    sessions = threading.local()
+
+    def process(path):
+        """Find the runners, then read their bibs. Returns (crops, found, seconds in the model)."""
+        with detector_lock:
+            crops = runner_crops(detector, path, args.crop_height, args.min_height)
+        with model_slots:
+            t0 = time.time()
+            if not hasattr(sessions, "session"):
+                sessions.session = requests.Session()
+            found = read_bibs(sessions.session, args.url, crops, args.model)
+            return crops, found, time.time() - t0
+
     new_file = not results_path.exists()
-    # Find the runners in the next photo on the CPU while the GPU reads this one's bibs
-    with open(results_path, "a", newline="", encoding="utf-8") as f, ThreadPoolExecutor(1) as pool:
+    # One more photo in flight than --workers, so the next photo's runners are found on the CPU
+    # while the GPU reads bibs
+    with open(results_path, "a", newline="", encoding="utf-8") as f, \
+            ThreadPoolExecutor(args.workers + 1) as pool:
         writer = csv.DictWriter(f, FIELDS)
         if new_file:
             writer.writeheader()
-        detect = lambda path: runner_crops(detector, path, args.crop_height, args.min_height)
-        upcoming = pool.submit(detect, todo[0][0]) if todo else None
+        queue = iter(todo)
+        running = {}
         started = time.time()
-        for i, (path, row) in enumerate(todo, 1):
-            cool_down(args.max_temp, args.resume_temp)
-            t0 = time.time()
-            current = upcoming
-            upcoming = pool.submit(detect, todo[i][0]) if i < len(todo) else None
-            try:
-                crops = current.result()
-                found = read_bibs(session, args.url, crops, args.model)
-            except Exception as e:
-                print(f"[{i}/{len(todo)}] {path.name}: error {e} (will retry next run)")
-                continue
-            secs = time.time() - t0
-            writer.writerow({
-                "album": row["album"], "file": row["file"], "photo_id": row["photo_id"],
-                "bibs": ";".join(found), "names": ";".join(found.values()),
-                "flickr_url": row["flickr_url"], "seconds": f"{secs:.1f}",
-            })
-            f.flush()
-            eta = (time.time() - started) / i * (len(todo) - i) / 3600
-            summary = ", ".join(f"{b} {n}".strip() for b, n in found.items()) or "none"
-            taken = taken_at(path)
-            print(f"[{i}/{len(todo)}] {row['album']}/{path.name}{f' @ {taken}' if taken else ''}: "
-                  f"{summary} ({len(crops)} runners, {secs:.1f}s, ~{eta:.1f}h left)")
-            if args.rest:
-                time.sleep(args.rest)
+        i = 0
+        while True:
+            while len(running) < args.workers + 1 and (job := next(queue, None)):
+                cool_down(args.max_temp, args.resume_temp)
+                running[pool.submit(process, job[0])] = job
+            if not running:
+                break
+            finished, _ = wait(running, return_when=FIRST_COMPLETED)
+            for future in finished:
+                path, row = running.pop(future)
+                i += 1
+                try:
+                    crops, found, secs = future.result()
+                except Exception as e:
+                    print(f"[{i}/{len(todo)}] {path.name}: error {e} (will retry next run)")
+                    continue
+                write_row(writer, f, row, crops, found, secs, path, i, len(todo), started)
+                if args.rest:
+                    time.sleep(args.rest)
+        if todo:
+            print(f"{len(todo) / (time.time() - started) * 3600:.0f} photos/hour")
 
     if results_path.exists():
         write_by_bib(results_path, results_path.with_name("by_bib_2pass.csv"))
+
+
+def write_row(writer, f, row, crops, found, secs, path, i, total, started):
+    writer.writerow({
+        "album": row["album"], "file": row["file"], "photo_id": row["photo_id"],
+        "bibs": ";".join(found), "names": ";".join(found.values()),
+        "flickr_url": row["flickr_url"], "seconds": f"{secs:.1f}",
+    })
+    f.flush()
+    eta = (time.time() - started) / i * (total - i) / 3600
+    summary = ", ".join(f"{b} {n}".strip() for b, n in found.items()) or "none"
+    taken = taken_at(path)
+    print(f"[{i}/{total}] {row['album']}/{path.name}{f' @ {taken}' if taken else ''}: "
+          f"{summary} ({len(crops)} runners, {secs:.1f}s, ~{eta:.1f}h left)", flush=True)
 
 
 if __name__ == "__main__":
