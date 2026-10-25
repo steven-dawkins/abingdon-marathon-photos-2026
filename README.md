@@ -10,17 +10,25 @@ python download_album.py --large         # ~4000px copies instead (very slow, se
 python download_album.py --originals     # untouched originals instead (very slow, see below)
 python download_album.py <album url> ... # other public Flickr albums
 
+python read_bibs_2pass.py --skip bibs.csv   # recommended: finds runners first, see below
 python read_bibs.py --limit 50           # quick accuracy/speed check first
 python read_bibs.py                      # full run -> bibs.csv and by_bib.csv
 python read_bibs.py --tiles 2 --out bibs_tiles.csv   # slower close-up pass, see below
-python read_bibs.py --max-temp 70 --resume-temp 60 --rest 3   # run cooler, see Speed
+python read_bibs.py --max-temp 70 --resume-temp 60 --rest 3   # run cooler (and slower), see Speed
+python compare_bibs.py bibs.csv bibs_new.csv   # agreement and speed of two runs on the same photos
 ```
 Both scripts can be stopped and re-run at any time: photos already downloaded / already in
 `bibs.csv` are skipped. `read_bibs.py` only processes photos that are already downloaded, so it
 can run while the download is still going.
 
-Needs Python 3.11 with `requests` and `Pillow`, and [Ollama](https://ollama.com) running with the
-model pulled: `ollama pull qwen2.5vl:7b`.
+Needs Python 3.11 with `requests` and `Pillow`, and a vision model served by
+[llama.cpp](https://github.com/ggml-org/llama.cpp)'s `llama-server` (Windows CUDA build from its releases page):
+```
+llama-server -hf ggml-org/Qwen2.5-VL-7B-Instruct-GGUF:Q4_K_M -ngl 99 -c 8192 -fa on --port 8080
+```
+`-hf` downloads the model and its vision encoder (mmproj) on first run. Ollama still works through
+its OpenAI-compatible endpoint: `ollama pull qwen2.5vl:7b`, then pass
+`--url http://localhost:11434/v1/chat/completions` (set `OLLAMA_CONTEXT_LENGTH=4096` before starting it).
 
 ## Website
 `site/` is a static React + TypeScript app for finding photos by race number or name; see
@@ -96,6 +104,12 @@ The short links are in `DEFAULT_ALBUMS` in `download_album.py`.
   bibs, but it is ~5× slower and added wrong numbers. Numbers that are part of a longer number
   in the same photo (e.g. "100" vs "1008", from a bib cut off at a strip edge) are dropped unless
   they have a different name. Best used as a second pass on photos where nothing was found.
+- `read_bibs_2pass.py` finds the runners first with a small person detector (YOLO, on the CPU),
+  then sends one contact sheet of their torsos, 640 px tall each. On the first 100 photos, through
+  llama-server, it read more bibs whose number and first name both match a finisher than
+  `read_bibs.py` did through Ollama (87 vs 80), with fewer misreads, at ~3.1 s vs ~3.6 s per photo.
+  `--crop-height 480` is ~2.1 s and finds as many numbers, but reads fewer names. The trade-offs
+  are in its docstring; `compare_bibs.py` compares two runs.
 
 ### Accuracy (28 photos checked by eye)
 - Clearly visible bibs: read correctly, including busy group shots with 4–5 runners.
@@ -110,13 +124,14 @@ The short links are in `DEFAULT_ALBUMS` in `download_album.py`.
 | `--tiles 2` | 14 – 25 s | 55 – 100 h |
 
 Based on about 10 photos per mode that the model hadn't seen before. Repeat runs on the same
-images are much faster because Ollama reuses its earlier work, so don't time with photos that
+images are much faster because the server reuses its earlier work, so don't time with photos that
 have already been processed. The GPU slows down when it gets hot: keep the laptop in the HP
 "Performance" profile and on the charger. The script prints a time-remaining estimate after every photo.
 
 To keep the laptop from running hot for hours, `read_bibs.py` checks the GPU temperature with
-`nvidia-smi` before each photo. Above `--max-temp` (default 75°C) it pauses until the GPU is down
-to `--resume-temp` (default 65°C), giving up waiting after 15 minutes. `--rest N` adds N seconds
+`nvidia-smi` before each photo. Above `--max-temp` (default 80°C) it pauses until the GPU is down
+to `--resume-temp` (default 72°C), giving up waiting after 15 minutes. With 70°C / 60°C the GPU spent
+about three-quarters of the time cooling down (it reached 70°C within a minute of work). `--rest N` adds N seconds
 after every photo, so the GPU runs cooler all the time: with photos taking ~4 s, `--rest 4` roughly
 halves the heat and doubles the run time.
 

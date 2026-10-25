@@ -1,10 +1,11 @@
 """Read runners' race (bib) numbers from the downloaded photos with a local vision model.
 
 Usage:
-    python read_bibs.py [photos_dir] [--limit N] [--tiles N] [--max-side PX] [--model NAME]
+    python read_bibs.py [photos_dir] [--limit N] [--tiles N] [--max-side PX] [--url URL] [--model NAME]
                         [--max-temp C] [--resume-temp C] [--rest SECONDS]
 
-Needs Ollama running locally with the model pulled (default qwen2.5vl:7b).
+Needs a vision model behind an OpenAI-compatible chat endpoint: llama.cpp's llama-server
+(default --url, see the README) or Ollama (--url http://localhost:11434/v1/chat/completions).
 Walks every album folder made by download_album.py and appends one row per
 photo to bibs.csv, so it can be stopped and re-run: photos already in
 bibs.csv are skipped. At the end it writes by_bib.csv, listing every photo
@@ -29,8 +30,8 @@ from pathlib import Path
 import requests
 from PIL import Image, ImageOps
 
-OLLAMA_URL = "http://localhost:11434/api/chat"
-DEFAULT_MODEL = "qwen2.5vl:7b"
+DEFAULT_URL = "http://localhost:8080/v1/chat/completions"  # llama-server
+DEFAULT_MODEL = "qwen2.5vl:7b"  # Ollama's name for it; llama-server answers with whichever model it loaded
 FIELDS = ["album", "file", "photo_id", "bibs", "names", "flickr_url", "seconds"]
 COOLDOWN_CHECK = 10  # seconds between temperature checks while paused
 COOLDOWN_MAX = 15 * 60  # carry on after this long even if it hasn't reached --resume-temp
@@ -74,16 +75,21 @@ def views(path, max_side, tiles):
         yield to_base64(im.crop(box), max_side)
 
 
-def ask_model(session, image, model, prompt=PROMPT):
-    resp = session.post(OLLAMA_URL, timeout=600, json={
+def ask_model(session, url, image, model, prompt=PROMPT):
+    # The context size is set when the server starts (llama-server -c 8192), not per request
+    resp = session.post(url, timeout=600, json={
         "model": model,
-        "messages": [{"role": "user", "content": prompt, "images": [image]}],
+        "messages": [{"role": "user", "content": [
+            {"type": "text", "text": prompt},
+            {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{image}"}},
+        ]}],
         "stream": False,
-        "options": {"temperature": 0, "num_ctx": 4096, "num_predict": MAX_ANSWER_TOKENS},
+        "temperature": 0,
+        "max_tokens": MAX_ANSWER_TOKENS,
     })
     resp.raise_for_status()
-    # Ollama's JSON-schema mode makes this model answer "no runners", so parse its free-text JSON instead
-    text = resp.json()["message"]["content"]
+    # Ollama's JSON-schema mode made this model answer "no runners", so parse its free-text JSON instead
+    text = resp.json()["choices"][0]["message"]["content"]
     match = re.search(r"\{.*\}", text, re.DOTALL)
     if not match:
         return []
@@ -123,11 +129,11 @@ def drop_counting(pairs):
     return [p for i, p in enumerate(pairs) if i not in bad]
 
 
-def read_bibs(session, path, model, max_side, tiles):
+def read_bibs(session, url, path, model, max_side, tiles):
     found = {}
     for image in views(path, max_side, tiles):
         pairs = [(re.sub(r"\D", "", str(r.get("bib", ""))).lstrip("0"), str(r.get("name", "")).strip().upper())
-                 for r in ask_model(session, image, model) if isinstance(r, dict)]
+                 for r in ask_model(session, url, image, model) if isinstance(r, dict)]
         for bib, name in drop_counting(pairs):
             if name == "UNKNOWN":
                 name = ""
@@ -216,6 +222,8 @@ def write_by_bib(results_path, out_path):
 def main():
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("photos_dir", nargs="?", default="photos")
+    parser.add_argument("--url", default=DEFAULT_URL,
+                        help="OpenAI-compatible chat endpoint (default llama-server on port 8080)")
     parser.add_argument("--model", default=DEFAULT_MODEL)
     parser.add_argument("--max-side", type=int, default=1600,
                         help="longest side of each image sent to the model; above ~1600 it no longer fits on an 8 GB GPU")
@@ -223,10 +231,10 @@ def main():
                         help="also send N overlapping close-up strips per photo: finds some smaller bibs, "
                              "but ~5x slower and adds more misreads (try 2)")
     parser.add_argument("--limit", type=int, help="only process this many new photos (for testing)")
-    parser.add_argument("--max-temp", type=int, default=70,
-                        help="pause when the GPU gets hotter than this (C, default 75)")
-    parser.add_argument("--resume-temp", type=int, default=60,
-                        help="after pausing, wait until the GPU has cooled to this (C, default 65)")
+    parser.add_argument("--max-temp", type=int, default=80,
+                        help="pause when the GPU gets hotter than this (C, default 80)")
+    parser.add_argument("--resume-temp", type=int, default=72,
+                        help="after pausing, wait until the GPU has cooled to this (C, default 72)")
     parser.add_argument("--rest", type=float, default=3,
                         help="seconds to pause after every photo, to run cooler overall (default 0)")
     parser.add_argument("--out", default="bibs.csv")
@@ -259,7 +267,7 @@ def main():
             cool_down(args.max_temp, args.resume_temp)
             t0 = time.time()
             try:
-                found = read_bibs(session, path, args.model, args.max_side, args.tiles)
+                found = read_bibs(session, args.url, path, args.model, args.max_side, args.tiles)
             except Exception as e:
                 print(f"[{i}/{len(todo)}] {path.name}: error {e} (will retry next run)")
                 continue
@@ -270,11 +278,12 @@ def main():
                 "flickr_url": row["flickr_url"], "seconds": f"{secs:.1f}",
             })
             f.flush()
-            eta = (time.time() - started) / i * (len(todo) - i) / 3600
+            rate = i / (time.time() - started) * 3600  # photos/hour so far, including thermal pauses
             summary = ", ".join(f"{b} {n}".strip() for b, n in found.items()) or "none"
             taken = taken_at(path)
             print(f"[{i}/{len(todo)}] {row['album']}/{path.name}{f' @ {taken}' if taken else ''}: "
-                  f"{summary} ({secs:.1f}s, ~{eta:.1f}h left)")
+                  f"{summary} ({secs:.1f}s, {rate:.0f} photos/h, ~{(len(todo) - i) / rate:.1f}h left)",
+                  flush=True)
             if args.rest:
                 time.sleep(args.rest)
 
