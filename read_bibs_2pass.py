@@ -7,14 +7,15 @@ Usage:
 
 A small person detector (YOLO, on the CPU so it doesn't compete with the vision model for GPU memory) finds
 the runners. Each runner's torso is cut from the full-size photo and the crops are packed into one
-small contact sheet, which the vision model reads in a single call. The sheet costs about half the
-image tokens of read_bibs.py's whole 1600 px photo, yet each bib gets as many pixels as before or
-more, and photos with no runners skip the model entirely. Full-size photos
-(download_album.py --large) give sharper crops at no extra cost.
+small contact sheet, which the vision model reads in a single call. Photos with no runners skip
+the model entirely. Full-size photos (download_album.py --large) give sharper crops at no extra cost.
 
-Ollama sends the model at least ~1,150 image tokens however small the image is, so one call per
-runner would be slower than one call per photo: that's why the crops share one sheet. (Not yet
-measured with llama-server, which may allow fewer.)
+llama-server charges image tokens by size, so the crop height sets the speed. On 40 test photos
+480 px crops (median ~470 image tokens, ~1.6 s) found as many finishers' numbers and first names as
+read_bibs.py's whole 1600 px photo (~2,265 tokens, ~4.6 s). Numbers stay readable at 240-320 px
+but names fall apart: the model guesses JOHN or reads the club. 640 px reads names best, but a
+sheet of 10 runners then needs more than -c 4096. One call per runner costs more than one sheet.
+(Ollama sends at least ~1,150 image tokens however small the image is, so there 320 px was enough.)
 
 Writes the same columns as read_bibs.py, to bibs_2pass.csv by default so the two can be compared;
 pass --out bibs.csv to use it for the site. Like read_bibs.py it can be stopped and re-run.
@@ -127,8 +128,8 @@ def main():
     parser.add_argument("--url", default=DEFAULT_URL,
                         help="OpenAI-compatible chat endpoint (default llama-server on port 8080)")
     parser.add_argument("--model", default=DEFAULT_MODEL)
-    parser.add_argument("--crop-height", type=int, default=320,
-                        help="height of each runner's crop on the contact sheet (default 320)")
+    parser.add_argument("--crop-height", type=int, default=480,
+                        help="height of each runner's crop on the contact sheet (default 480)")
     parser.add_argument("--min-height", type=float, default=0.15,
                         help="skip runners shorter than this fraction of the photo's height: too far away "
                              "to read (default 0.15)")

@@ -23,7 +23,7 @@ can run while the download is still going.
 Needs Python 3.11 with `requests` and `Pillow`, and a vision model served by
 [llama.cpp](https://github.com/ggml-org/llama.cpp)'s `llama-server` (Windows CUDA build from its releases page):
 ```
-llama-server -hf ggml-org/Qwen2.5-VL-7B-Instruct-GGUF:Q4_K_M -ngl 99 -c 4096 -fa on --port 8080
+llama-server -hf ggml-org/Qwen2.5-VL-7B-Instruct-GGUF:Q4_K_M -ngl 99 -c 8192 -fa on --port 8080
 ```
 `-hf` downloads the model and its vision encoder (mmproj) on first run. Ollama still works through
 its OpenAI-compatible endpoint: `ollama pull qwen2.5vl:7b`, then pass

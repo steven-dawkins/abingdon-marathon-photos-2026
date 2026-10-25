@@ -76,7 +76,7 @@ def views(path, max_side, tiles):
 
 
 def ask_model(session, url, image, model, prompt=PROMPT):
-    # The context size is set when the server starts (llama-server -c 4096), not per request
+    # The context size is set when the server starts (llama-server -c 8192), not per request
     resp = session.post(url, timeout=600, json={
         "model": model,
         "messages": [{"role": "user", "content": [
