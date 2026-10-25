@@ -2,8 +2,8 @@
 
 Usage:
     python read_bibs_2pass.py [photos_dir] [--limit N] [--crop-height PX] [--min-height F] [--url URL]
-                              [--model NAME] [--workers N] [--max-temp C] [--resume-temp C] [--rest SECONDS] [--out bibs_2pass.csv]
-                              [--skip bibs.csv ...]
+                              [--model NAME] [--workers N] [--no-text-check] [--max-temp C] [--resume-temp C]
+                              [--rest SECONDS] [--out bibs_2pass.csv] [--skip bibs.csv ...]
 
 A small person detector (YOLO, on the CPU so it doesn't compete with the vision model for GPU memory) finds
 the runners. Each runner's torso is cut from the full-size photo and the crops are packed into one
@@ -23,7 +23,15 @@ so there 320 px was enough.)
 Writes the same columns as read_bibs.py, to bibs_2pass.csv by default so the two can be compared;
 pass --out bibs.csv to use it for the site. Like read_bibs.py it can be stopped and re-run.
 --skip bibs.csv also skips the photos read_bibs.py has already done (e.g. to share the work).
-Needs: pip install ultralytics (the detector's weights download on first run).
+
+At the finish the detector also finds the crowd behind the barriers, which can make the sheet
+several times bigger than its one or two runners need. So when it finds several people, a small
+text reader (RapidOCR, on the CPU) checks each crop and drops those with no text on them: every
+bib has its number, a name and "2026 Abingdon Marathon" printed on it. The biggest person is
+always kept. It also drops runners too far away for it to read, whose bibs the vision model
+rarely reads either. --no-text-check turns it off.
+
+Needs: pip install ultralytics rapidocr-onnxruntime (the detector's weights download on first run).
 """
 
 import argparse
@@ -34,6 +42,7 @@ import time
 from concurrent.futures import FIRST_COMPLETED, ThreadPoolExecutor, wait
 from pathlib import Path
 
+import numpy as np
 import requests
 from PIL import Image, ImageOps
 
@@ -50,6 +59,9 @@ TORSO_TOP, TORSO_BOTTOM, SIDE_MARGIN = 0.10, 0.80, 0.08
 EDGE = 0.01  # a person's box this close (fraction of the photo) to its top or bottom is cut off by the frame
 SHEET_WIDTH = 1200  # crops are laid out in rows up to this wide
 GAP = 16  # white space between crops, so the model sees them as separate pictures
+TEXT_CHECK_MIN = 4  # only check people for text when the detector finds at least this many
+TEXT_SIDE = 320  # crops are shrunk to this height for the text check: ~4x faster than 640, still reads bibs
+MIN_TEXT = 3  # characters in a piece of text that counts; spectators' clothing gives single letters
 
 PROMPT = """This image is a grid of close-ups of runners in a marathon, separated by white space.
 Read the race number on each runner's bib, with the first name printed below it.
@@ -61,6 +73,24 @@ or {"runners": []} if there are no readable bibs."""
 def load_detector():
     from ultralytics import YOLO  # slow import, so only when it's needed
     return YOLO(DETECTOR)
+
+
+def load_text_reader():
+    from rapidocr_onnxruntime import RapidOCR
+    return RapidOCR()
+
+
+def with_text(reader, crops):
+    """Drop people with no readable text on them (spectators), keeping the biggest person regardless."""
+    if reader is None or len(crops) < TEXT_CHECK_MIN:
+        return crops
+    keep = crops[:1]
+    for crop in crops[1:]:
+        small = crop.resize((max(1, round(crop.width * TEXT_SIDE / crop.height)), TEXT_SIDE))
+        result, _ = reader(np.array(small), use_cls=False)
+        if any(len(text) >= MIN_TEXT and float(conf) > 0.5 for _, text, conf in result or []):
+            keep.append(crop)
+    return keep
 
 
 def runner_crops(detector, path, crop_height, min_height):
@@ -138,6 +168,8 @@ def main():
     parser.add_argument("--min-height", type=float, default=0.15,
                         help="skip runners shorter than this fraction of the photo's height: too far away "
                              "to read (default 0.15)")
+    parser.add_argument("--no-text-check", action="store_true",
+                        help="send every person found to the model, not just those with text on them")
     parser.add_argument("--limit", type=int, help="only process this many new photos (for testing)")
     parser.add_argument("--workers", type=int, default=1,
                         help="photos sent to the model at once (default 1). The slots share llama-server's "
@@ -172,20 +204,23 @@ def main():
           else "Can't read the GPU temperature (nvidia-smi not found): no thermal pauses")
 
     detector = load_detector()
+    reader = None if args.no_text_check else load_text_reader()
     detector_lock = threading.Lock()  # one detection at a time: it already uses every CPU core
     model_slots = threading.Semaphore(args.workers)
     sessions = threading.local()
 
     def process(path):
-        """Find the runners, then read their bibs. Returns (crops, found, seconds in the model)."""
+        """Find the runners, then read their bibs. Returns (people found, crops sent, found, seconds in the model)."""
         with detector_lock:
             crops = runner_crops(detector, path, args.crop_height, args.min_height)
+            people = len(crops)
+            crops = with_text(reader, crops)
         with model_slots:
             t0 = time.time()
             if not hasattr(sessions, "session"):
                 sessions.session = requests.Session()
             found = read_bibs(sessions.session, args.url, crops, args.model)
-            return crops, found, time.time() - t0
+            return people, crops, found, time.time() - t0
 
     new_file = not results_path.exists()
     # One more photo in flight than --workers, so the next photo's runners are found on the CPU
@@ -210,11 +245,11 @@ def main():
                 path, row = running.pop(future)
                 i += 1
                 try:
-                    crops, found, secs = future.result()
+                    people, crops, found, secs = future.result()
                 except Exception as e:
                     print(f"[{i}/{len(todo)}] {path.name}: error {e} (will retry next run)")
                     continue
-                write_row(writer, f, row, crops, found, secs, path, i, len(todo), started)
+                write_row(writer, f, row, people, crops, found, secs, path, i, len(todo), started)
                 if args.rest:
                     time.sleep(args.rest)
         if todo:
@@ -224,7 +259,7 @@ def main():
         write_by_bib(results_path, results_path.with_name("by_bib_2pass.csv"))
 
 
-def write_row(writer, f, row, crops, found, secs, path, i, total, started):
+def write_row(writer, f, row, people, crops, found, secs, path, i, total, started):
     writer.writerow({
         "album": row["album"], "file": row["file"], "photo_id": row["photo_id"],
         "bibs": ";".join(found), "names": ";".join(found.values()),
@@ -234,9 +269,9 @@ def write_row(writer, f, row, crops, found, secs, path, i, total, started):
     rate = i / (time.time() - started) * 3600  # photos/hour so far, including thermal pauses
     summary = ", ".join(f"{b} {n}".strip() for b, n in found.items()) or "none"
     taken = taken_at(path)
+    runners = f"{len(crops)} runners" + (f" of {people} people" if people != len(crops) else "")
     print(f"[{i}/{total}] {row['album']}/{path.name}{f' @ {taken}' if taken else ''}: "
-          f"{summary} ({len(crops)} runners, {secs:.1f}s, {rate:.0f} photos/h, "
-          f"~{(total - i) / rate:.1f}h left)", flush=True)
+          f"{summary} ({runners}, {secs:.1f}s, {rate:.0f} photos/h, ~{(total - i) / rate:.1f}h left)", flush=True)
 
 
 if __name__ == "__main__":
