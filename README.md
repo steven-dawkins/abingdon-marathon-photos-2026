@@ -27,7 +27,7 @@ model pulled: `ollama pull qwen2.5vl:7b`.
 `WEBSITE_PLAN.md`. Images are hotlinked from Flickr, so the site only publishes an index:
 ```
 python fetch_results.py                  # official results -> results.csv
-python build_index.py                    # Flickr listing + bibs.csv + bibs_2pass.csv + results.csv -> site/public/data/photos.json
+python build_index.py                    # Flickr listing + bibs*.csv + results.csv -> site/public/data/photos.json
 cd site && npm install && npm run dev    # try it locally
 ```
 Commit and push `site/public/data/photos.json` to publish: the GitHub Actions workflow builds the

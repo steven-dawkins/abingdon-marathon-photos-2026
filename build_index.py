@@ -1,11 +1,11 @@
 """Build the website's photo index (site/public/data/photos.json).
 
 Usage:
-    python build_index.py [--bibs bibs.csv bibs_2pass.csv ...] [--results results.csv] [--out site/public/data/photos.json]
+    python build_index.py [--bibs bibs.csv bibs_2pass.csv bibs_llamacpp.csv ...] [--results results.csv] [--out site/public/data/photos.json]
 
 Lists every photo in the Flickr albums (for the image URL secrets and the time each photo was
-taken), joins the race numbers read by read_bibs.py and read_bibs_2pass.py (by default bibs.csv
-and bibs_2pass.csv, if there) and the official results from fetch_results.py, and writes one
+taken), joins the race numbers read by the bib readers (by default bibs.csv, bibs_2pass.csv and
+bibs_llamacpp.csv, where they exist) and the official results from fetch_results.py, and writes one
 compact JSON file for the front end. Re-run it whenever more photos have been processed. Photos
 not processed yet are still included, without bibs.
 
@@ -44,7 +44,7 @@ MAX_PARTIAL = 4  # more finishers than this matching a partial number and name i
 # Course order of the albums, matched against the album titles
 COURSE_ORDER = ["Start", "Mile 5", "Miles 11 & 19.5", "Mile 24", "Mile 26 (track)",
                 "Finish a", "Finish b", "Finish c"]
-DEFAULT_BIBS = ["bibs.csv", "bibs_2pass.csv"]
+DEFAULT_BIBS = ["bibs.csv", "bibs_2pass.csv", "bibs_llamacpp.csv"]
 
 MARATHON_MILES = 26.2188
 # Places photographed, as (album label, place label, miles from the start). One album covers two
@@ -141,12 +141,14 @@ def score_bibs(bibs, names, finishers):
 
 
 def load_bibs(paths):
-    """photo_id -> (bibs, names) from read_bibs.py's or read_bibs_2pass.py's output, combining
+    """photo_id -> (bibs, names) from the bib readers' output files, combining
     the readings of a photo that is in more than one file."""
     found = {}
     for path in paths:
         with open(path, newline="", encoding="utf-8") as f:
             for row in csv.DictReader(f):
+                if row["seconds"] is None:
+                    continue  # the last row, still being written by a reader that's running
                 bibs = row["bibs"].split(";") if row["bibs"] else []
                 names = row["names"].split(";") if row["names"] else [""] * len(bibs)
                 # Also cleans up rows read before read_bibs.py had this filter
