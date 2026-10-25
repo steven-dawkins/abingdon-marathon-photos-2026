@@ -2,9 +2,8 @@
 import { createContext, useContext } from 'react'
 
 /**
- * How sure we are a bib read belongs to the runner (see build_index.py): 3 number matches and the
- * name does too or couldn't be read, 2 number matches but not the name, 1 name matches part of the
- * number, 0 number isn't a finisher's.
+ * How sure we are a bib read belongs to the runner (see build_index.py): 3 number matches, 2 name
+ * matches a number one digit away, 1 name matches part of the number, 0 number isn't a finisher's.
  */
 export type Confidence = 0 | 1 | 2 | 3
 
@@ -155,6 +154,12 @@ export function useIndex(): PhotoIndex {
   const index = useContext(IndexContext)
   if (!index) throw new Error('useIndex used outside IndexContext')
   return index
+}
+
+/** "CAMERON WEIR" -> "Cameron": some names were entered all in capitals or lower case */
+export function firstName(name: string): string {
+  const word = name.split(' ')[0]
+  return word === word.toUpperCase() || word === word.toLowerCase() ? word[0].toUpperCase() + word.slice(1).toLowerCase() : word
 }
 
 export function confidenceFor(photo: Photo, bib: string): Confidence {

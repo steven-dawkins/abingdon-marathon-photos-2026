@@ -25,12 +25,12 @@ export function About() {
       </p>
       <ul>
         <li>
-          <strong>Photos listed first</strong>: the number is a finisher's, and the first name on the bib matches
-          theirs or couldn't be read (names are often hidden or blurred).
+          <strong>Photos listed first</strong>: the number is a finisher's. The first name on the bib isn't needed
+          to match, as names are often hidden, blurred or misread.
         </li>
         <li>
-          <strong>Possibly</strong> (the runner's name): the number is a finisher's but the name read doesn't match, or the number
-          was probably misread and is the closest finisher with that first name.
+          <strong>Possibly</strong> (the runner's name): the number read is one digit away from the runner's and the first name
+          matches theirs, so the number was probably misread.
         </li>
         <li>
           <strong>Number partly hidden</strong>: only part of the number could be read (e.g. 14 for 1425), but the

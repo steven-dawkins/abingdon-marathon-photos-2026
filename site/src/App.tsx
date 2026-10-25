@@ -6,6 +6,7 @@ import { IndexContext, loadIndex, type PhotoIndex } from './data'
 import { SearchBox } from './components/SearchBox'
 import { Home } from './pages/Home'
 import { RunnerPage } from './pages/Runner'
+import { PassedPage } from './pages/Passed'
 import { PhotoPage } from './pages/Photo'
 import { AlbumPage } from './pages/Album'
 import { About } from './pages/About'
@@ -76,6 +77,7 @@ export default function App() {
             <Routes>
               <Route path="/" element={<Home />} />
               <Route path="/bib/:bib" element={<RunnerPage />} />
+              <Route path="/bib/:bib/passed/:album" element={<PassedPage />} />
               <Route path="/photo/:id" element={<PhotoPage />} />
               <Route path="/album/:album" element={<AlbumPage />} />
               <Route path="/about" element={<About />} />

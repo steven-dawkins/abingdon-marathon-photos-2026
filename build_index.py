@@ -10,16 +10,16 @@ compact JSON file for the front end. Re-run it whenever more photos have been pr
 not processed yet are still included, without bibs.
 
 Each bib read gets a confidence level:
-    3  the number is a finisher's and the first name read off the bib matches theirs, or no name
-       could be read (names are often hidden or blurred where the number isn't)
-    2  the number is a finisher's, but the name read doesn't match theirs
-    1  the number read is part of a finisher's number and the name matches theirs: the bib was
-       partly hidden (e.g. "14 SARAH" -> 1425 when 1425 is Sarah)
+    3  the number is a finisher's, whatever name was read (names are often hidden, blurred or
+       misread where the number isn't)
+    2  inferred from the name: the number read is one digit away from a finisher's and the name
+       matches theirs, when exactly one such finisher exists (e.g. "145 SARAH" -> 146 when 146 is Sarah)
+    1  inferred from the name, less surely: the number read is part of a finisher's number (the
+       bib was partly hidden, e.g. "14 SARAH" -> 1425 when 1425 is Sarah), or one of several
+       finishers one digit away; up to MAX_PARTIAL finishers
     0  the number isn't any finisher's (a misread, or a runner who didn't finish)
-A number with a non-matching name is replaced by a finisher one digit away whose first name
-does match, when exactly one such finisher exists (e.g. "145 SARAH" -> 146 when 146 is Sarah),
-with confidence 2. Otherwise every finisher (up to MAX_PARTIAL) whose number contains the
-number read, or is one digit away from it, and whose first name matches is added with confidence 1.
+A number read with a name that isn't its finisher's keeps confidence 3 (or 0), and the finishers
+inferred from the name are added alongside it.
 
 It also estimates when each finisher passed each place on the course, by the camera's clock
 there (see passing_times), so the site can show photos taken as a runner passed even when their
@@ -124,29 +124,26 @@ def score_bibs(bibs, names, finishers):
 
     for bib, name in zip(bibs, names):
         official = finishers.get(bib)
+        add(bib, 3 if official else 0)
         if official and same_name(name, official):
-            add(bib, 3)
             named.add(bib)
             continue
         # The reader sometimes repeats the number where it couldn't read a name
         name = re.sub(r"[^A-Z]", "", name.upper())
-        if official and not name:
-            add(bib, 3)
+        if not name:
             continue
-        if name:
-            # The name doesn't match: try a finisher one digit away with this first name
-            near = [b for b, n in finishers.items() if one_digit_away(bib, b) and same_name(name, n)]
-            if len(near) == 1:
-                add(near[0], 2)  # probably right, but common names make it a guess
-                continue
-            # Or a partly hidden bib: finishers whose number contains the digits read. Several
-            # finishers one digit away are weaker candidates too
-            partial = {b for b, n in finishers.items() if bib in b and b != bib and same_name(name, n)}
-            partial.update(near)
-            if len(partial) <= MAX_PARTIAL:
-                for b in partial:
-                    add(b, 1)
-        add(bib, 2 if official else 0)
+        # The name isn't this number's finisher's: try a finisher one digit away with this first name
+        near = [b for b, n in finishers.items() if one_digit_away(bib, b) and same_name(name, n)]
+        if len(near) == 1:
+            add(near[0], 2)  # probably right, but common names make it a guess
+            continue
+        # Or a partly hidden bib: finishers whose number contains the digits read. Several
+        # finishers one digit away are weaker candidates too
+        partial = {b for b, n in finishers.items() if bib in b and b != bib and same_name(name, n)}
+        partial.update(near)
+        if len(partial) <= MAX_PARTIAL:
+            for b in partial:
+                add(b, 1)
     return [[b, c] for b, c in scored.items()], named
 
 

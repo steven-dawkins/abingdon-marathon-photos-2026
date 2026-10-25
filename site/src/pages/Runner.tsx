@@ -4,12 +4,10 @@ import { DownloadAllButton } from '../components/DownloadButtons'
 import { PhotoGrid } from '../components/PhotoGrid'
 import { trackEvent } from '../analytics'
 import { reportUrl } from '../config'
-import { confidenceFor, useIndex, type Album, type Photo, type Runner } from '../data'
+import { confidenceFor, firstName, useIndex, type Album, type Photo, type Runner } from '../data'
+import { LIST_WITHIN, photosAsPassed } from '../passing'
 import { ordinal, placings } from '../stats'
 import { formatClock } from '../time'
-
-/** Places whose passing-time estimates are this close (in seconds) list their photos outright */
-const LIST_WITHIN = 30
 
 function byAlbum(photos: Photo[]): [Album, Photo[]][] {
   const groups = new Map<Album, Photo[]>()
@@ -99,7 +97,7 @@ export function RunnerPage() {
           <h2>{confident.length ? `Possibly ${first}` : 'Possible matches'}</h2>
           <p className="note">
             {runner
-              ? `Race number ${bib} (or one very like it) was read in these photos, but the name read on the bib didn't match.`
+              ? `A number one digit away from ${bib} was read in these photos, with the name ${first}, so the number was probably misread.`
               : 'This number was read in these photos.'}
           </p>
           <PhotoGroups photos={possible} bib={bib} />
@@ -138,10 +136,20 @@ export function RunnerPage() {
         <>
           <h2>Taken as {first} passed</h2>
           <p className="note">
-            Race number {bib} wasn't read in these, but they were taken within seconds of when {first} passed, worked out
-            from the chip time and the camera's clock. Other runners passing at the same moment are in them too.
+            More photos taken within seconds of when {first} passed these places, worked out from the chip time and the
+            camera's clock. Race number {bib} wasn't read in them, and other runners passing at the same moment are in
+            them too.
           </p>
-          <PhotoGroups photos={passed} bib={bib} />
+          <ul className="album-list">
+            {passed.map(({ point, photos: group }) => (
+              <li key={point.label}>
+                <Link to={`/bib/${bib}/passed/${point.album.index}`}>
+                  <span>{point.label}</span>
+                  <small>{photoCount(group.length)}</small>
+                </Link>
+              </li>
+            ))}
+          </ul>
         </>
       )}
 
@@ -168,21 +176,6 @@ export function RunnerPage() {
       )}
     </>
   )
-}
-
-/** "CAMERON WEIR" -> "Cameron": some names were entered all in capitals or lower case */
-function firstName(name: string): string {
-  const word = name.split(' ')[0]
-  return word === word.toUpperCase() || word === word.toLowerCase() ? word[0].toUpperCase() + word.slice(1).toLowerCase() : word
-}
-
-/** Photos taken within seconds of the runner passing, at places where that can be worked out so closely. */
-function photosAsPassed(runner: Runner, listed: Photo[]): Photo[] {
-  const ids = new Set(listed.map((p) => p.id))
-  return runner.passing
-    .filter(({ point }) => point.window <= LIST_WITHIN)
-    .flatMap(({ point, time }) => point.album.photos.filter((p) => Math.abs(p.time - time) <= point.window))
-    .filter((p) => !ids.has(p.id))
 }
 
 /** Places the runner wasn't found, where the estimate is too rough to list photos, with the photo nearest it. */
