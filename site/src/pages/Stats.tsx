@@ -52,7 +52,7 @@ export function StatsPage() {
 
       <h2>Finish times</h2>
       <p className="note">Finishers in each 5 minutes of chip time.</p>
-      <FinishHistogram times={times} highlight={you && parseDuration(you.time)} />
+      <FinishHistogram times={times} highlight={you && parseDuration(you.time)} highlightLabel={you?.bib} />
       <ul className="round-times">
         {ROUND_TIMES.map((t) => {
           const n = times.filter((x) => x < t).length

@@ -25,10 +25,10 @@ export function About() {
       </p>
       <ul>
         <li>
-          <strong>Your photos</strong>: the number is a finisher's and the first name on the bib matches theirs.
+          <strong>Photos listed first</strong>: the number is a finisher's and the first name on the bib matches theirs.
         </li>
         <li>
-          <strong>Possibly you</strong>: the number is a finisher's but the name couldn't be read or didn't match, or the number
+          <strong>Possibly</strong> (the runner's name): the number is a finisher's but the name couldn't be read or didn't match, or the number
           was probably misread and is the closest finisher with that first name.
         </li>
         <li>
@@ -39,13 +39,13 @@ export function About() {
       <p>
         Bibs that are hidden, turned away or blurred can't be read, so you may be in more photos than are listed.
         Each place on the course has a <Link to="/">photo album</Link> in time order; “More photos from around then”
-        on your page opens it at the moment you were photographed there.
+        on a runner's page opens it at the moment they were photographed there.
       </p>
       <p>
-        Runners whose numbers were read show how far each camera's clock is out. With that and your chip times, your
-        page also lists <strong>photos taken as you passed</strong> the finish and the track at Mile 26, to within a few
-        seconds, even where your number couldn't be read. Out on the course, where runners' paces vary more, it links
-        to each album at about the time you passed instead.
+        Runners whose numbers were read show how far each camera's clock is out. With that and their chip times, each
+        runner's page also lists <strong>photos taken as they passed</strong> the finish and the track at Mile 26, to
+        within a few seconds, even where their number couldn't be read. Out on the course, where runners' paces vary
+        more, it links to each album at about the time they passed instead.
       </p>
       <p>
         So far {index.processedCount.toLocaleString()} of {index.photos.size.toLocaleString()} photos have been checked,

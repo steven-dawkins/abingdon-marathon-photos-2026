@@ -43,6 +43,8 @@ export function RunnerPage() {
   const unsure = possible.length + partial.length
   const passed = runner ? photosAsPassed(runner, photos) : []
   const lookAround = runner ? placesToLook(runner, photos) : []
+  // The page is often read by friends and family, so it names the runner rather than saying "you"
+  const first = runner ? firstName(runner.name) : `number ${bib}`
 
   return (
     <>
@@ -94,10 +96,10 @@ export function RunnerPage() {
 
       {possible.length > 0 && (
         <>
-          <h2>{confident.length ? 'Possibly you' : 'Possible matches'}</h2>
+          <h2>{confident.length ? `Possibly ${first}` : 'Possible matches'}</h2>
           <p className="note">
             {runner
-              ? "Your number (or one very like it) was read in these photos, but the name on the bib couldn't be read or didn't match."
+              ? `Race number ${bib} (or one very like it) was read in these photos, but the name on the bib couldn't be read or didn't match.`
               : 'This number was read in these photos.'}
           </p>
           <PhotoGroups photos={possible} bib={bib} />
@@ -108,7 +110,7 @@ export function RunnerPage() {
         <>
           <h2>Number partly hidden</h2>
           <p className="note">
-            Your first name was read in these photos with only part of a race number (e.g. 14 for 1425), so they may
+            The name {first} was read in these photos with only part of a race number (e.g. 14 for 1425), so they may
             be of someone else with the same name.
           </p>
           <PhotoGroups photos={partial} bib={bib} />
@@ -125,7 +127,7 @@ export function RunnerPage() {
           <p>
             In the meantime you can <Link to="/">browse the photos by place on the course</Link>, or{' '}
             <a href={reportUrl({ bib })} target="_blank" rel="noreferrer">
-              tell us about a photo you're in
+              tell us about a photo of {first}
             </a>
             .
           </p>
@@ -134,10 +136,10 @@ export function RunnerPage() {
 
       {passed.length > 0 && (
         <>
-          <h2>Taken as you passed</h2>
+          <h2>Taken as {first} passed</h2>
           <p className="note">
-            Your race number wasn't read in these, but they were taken within seconds of when you passed, worked out
-            from your chip time and the camera's clock. Other runners passing at the same moment are in them too.
+            Race number {bib} wasn't read in these, but they were taken within seconds of when {first} passed, worked out
+            from the chip time and the camera's clock. Other runners passing at the same moment are in them too.
           </p>
           <PhotoGroups photos={passed} bib={bib} />
         </>
@@ -145,11 +147,12 @@ export function RunnerPage() {
 
       {lookAround.length > 0 && (
         <>
-          <h2>Look for yourself</h2>
+          <h2>Look through the albums</h2>
           <p className="note">
-            {photos.length + passed.length > 0 ? "You weren't found at these places, but from" : 'From'} your chip
-            time you probably passed them at about these times. Each opens the album at that moment: look a few minutes
-            either side.
+            {photos.length + passed.length > 0
+              ? `${first} wasn't found at these places, but going by the chip time probably passed them at about these times.`
+              : `Going by the chip time, ${first} probably passed these places at about these times.`}{' '}
+            Each opens the album at that moment: look a few minutes either side.
           </p>
           <ul className="album-list">
             {lookAround.map(({ label, album, time, photo }) => (
@@ -165,6 +168,12 @@ export function RunnerPage() {
       )}
     </>
   )
+}
+
+/** "CAMERON WEIR" -> "Cameron": some names were entered all in capitals or lower case */
+function firstName(name: string): string {
+  const word = name.split(' ')[0]
+  return word === word.toUpperCase() || word === word.toLowerCase() ? word[0].toUpperCase() + word.slice(1).toLowerCase() : word
 }
 
 /** Photos taken within seconds of the runner passing, at places where that can be worked out so closely. */

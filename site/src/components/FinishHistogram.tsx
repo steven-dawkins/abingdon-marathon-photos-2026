@@ -10,12 +10,13 @@ const GAP = 2
 interface Props {
   /** Every finisher's chip time in seconds */
   times: number[]
-  /** A runner's own time, marked as "You" */
+  /** One runner's time, marked with highlightLabel */
   highlight?: number
+  highlightLabel?: string
 }
 
 /** Finishers per 5 minutes of chip time, with a tooltip per bar and a table view. */
-export function FinishHistogram({ times, highlight }: Props) {
+export function FinishHistogram({ times, highlight, highlightLabel }: Props) {
   const box = useRef<HTMLDivElement>(null)
   const [width, setWidth] = useState(0)
   const [hover, setHover] = useState<number | null>(null)
@@ -85,7 +86,7 @@ export function FinishHistogram({ times, highlight }: Props) {
                   )}
                   {i === youBin && (
                     <text className="you-label" x={x + barW / 2} y={y(n) - 6} textAnchor="middle">
-                      You
+                      {highlightLabel}
                     </text>
                   )}
                   <rect
