@@ -16,7 +16,7 @@ Ollama sends the model at least ~1,150 image tokens however small the image is, 
 runner would be slower than one call per photo: that's why the crops share one sheet.
 
 Writes the same columns as read_bibs.py, to bibs_2pass.csv by default so the two can be compared;
-pass --out bibs.csv to use it for the site. Like read_bibs.py it can be stopped and re-run.
+build_index.py reads both files. Like read_bibs.py it can be stopped and re-run.
 --skip bibs.csv also skips the photos read_bibs.py has already done (e.g. to share the work).
 Needs: pip install ultralytics (the detector's weights download on first run).
 """

@@ -42,6 +42,12 @@ export function About() {
         on your page opens it at the moment you were photographed there.
       </p>
       <p>
+        Runners whose numbers were read show how far each camera's clock is out. With that and your chip times, your
+        page also lists <strong>photos taken as you passed</strong> the finish and the track at Mile 26, to within a few
+        seconds, even where your number couldn't be read. Out on the course, where runners' paces vary more, it links
+        to each album at about the time you passed instead.
+      </p>
+      <p>
         So far {index.processedCount.toLocaleString()} of {index.photos.size.toLocaleString()} photos have been checked,
         and more are added as they're processed. Last updated {index.generated.toLocaleDateString('en-GB', {
           day: 'numeric',

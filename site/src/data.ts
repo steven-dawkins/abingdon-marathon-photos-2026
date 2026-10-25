@@ -20,11 +20,21 @@ interface RawPhoto {
   r?: 1
   b?: [string, Confidence][]
 }
+interface RawRunner {
+  bib: string
+  name: string
+  club: string | null
+  time: string
+  pos: number
+  /** Estimated time passing each of RawIndex.points, by the camera's clock there */
+  e?: (number | null)[]
+}
 interface RawIndex {
   generated: string
   owner: string
   albums: { id: string; title: string; label: string }[]
-  runners: Runner[]
+  points?: { a: number; label: string; w: number }[]
+  runners: RawRunner[]
   photos: RawPhoto[]
 }
 
@@ -35,12 +45,21 @@ export interface Album {
   label: string
   photos: Photo[] // in time order
 }
+/** A place on the course where photos were taken. The "Miles 11 & 19.5" album has two. */
+export interface CoursePoint {
+  album: Album
+  label: string
+  /** How far off (in seconds) an estimated passing time can be: 90% of runners were within it */
+  window: number
+}
 export interface Runner {
   bib: string
   name: string
   club: string | null
   time: string
   pos: number
+  /** When the runner probably passed each place, worked out from their chip times (see build_index.py) */
+  passing: { point: CoursePoint; time: number }[]
 }
 export interface Photo {
   id: string
@@ -103,12 +122,18 @@ export async function loadIndex(): Promise<PhotoIndex> {
     }
   }
 
+  const points: CoursePoint[] = (raw.points ?? []).map((p) => ({ album: albums[p.a], label: p.label, window: p.w }))
+  const runners = raw.runners.map(({ e, ...r }): Runner => ({
+    ...r,
+    passing: (e ?? []).flatMap((time, i) => (time === null ? [] : [{ point: points[i], time }])),
+  }))
+
   return {
     generated: new Date(raw.generated),
     owner: raw.owner,
     albums,
     photos,
-    runners: new Map(raw.runners.map((r) => [r.bib, r])),
+    runners: new Map(runners.map((r) => [r.bib, r])),
     photosByBib,
     processedCount,
   }

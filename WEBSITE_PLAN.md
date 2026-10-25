@@ -171,9 +171,10 @@ abingdon_marathon_photos/
 3. **Download all + album browsing**, mobile polish, credit/about text. Done: albums load more
    photos as you scroll, have a "Jump to" time picker and label each thumbnail with its time and
    the bibs read; swipe and preloading on the photo page; Share button; About page.
-4. **Time-based help (optional):** work out each camera's clock offset from confident
-   matches (runner's start/finish time vs. photo time). Then estimate when a runner passed each
-   course point and jump straight to that moment in albums where they weren't found.
+4. **Time-based help:** done. `build_index.py` corrects an even-pace estimate of when each runner
+   passed each place by the median error for matched runners with similar finish times (which
+   covers both the camera clock and real pacing). Finish and Mile 26 estimates are good to a few
+   seconds, so runner pages list those photos; elsewhere (±2–8 min) they link to the album at that moment.
 5. **Deploy:** go live as soon as phases 1–2 work, with whatever photos are processed by then.
    After that, re-run `build_index.py` and push `photos.json` as `read_bibs.py` progresses; the
    workflow redeploys on every push. (Phases 3–4 follow as later pushes.)
@@ -182,10 +183,10 @@ abingdon_marathon_photos/
 - **Bib reading is only ~5% done** (675 of 14,470 photos). The site goes live anyway and the
   home page shows how many photos have been processed so far, so a runner with no matches yet
   knows to come back (or browse the albums).
-- **Camera clocks:** not checked yet. Some photos before the leaders could arrive are expected
-  (e.g. 09:40 at Mile 11 shows the water station team), so early timestamps alone don't mean a
-  clock is wrong. Matching runners' finish times against the finish albums will show whether any
-  camera is off. Until then, times are only used within an album (Phase 4).
+- **Camera clocks (checked 2026-10-25 against finish times):** Finish a is about 170 s fast and
+  Finish c about 1 h 52 min slow. Finish b and Mile 26 photos are taken 65–95 s before runners cross
+  the line, so those cameras are on the course or nearly right. Album pages still show the cameras'
+  own times, so Finish c's "Jump to" times are wrong.
 - If a photographer replaces or re-uploads photos on Flickr, their secrets change and the
   links break: re-run `build_index.py`.
 - The Flickr site key `download_album.py` scrapes is only used at build time. It is never

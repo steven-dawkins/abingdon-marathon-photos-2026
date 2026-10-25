@@ -27,12 +27,17 @@ model pulled: `ollama pull qwen2.5vl:7b`.
 `WEBSITE_PLAN.md`. Images are hotlinked from Flickr, so the site only publishes an index:
 ```
 python fetch_results.py                  # official results -> results.csv
-python build_index.py                    # Flickr listing + bibs.csv + results.csv -> site/public/data/photos.json
+python build_index.py                    # Flickr listing + bibs.csv + bibs_2pass.csv + results.csv -> site/public/data/photos.json
 cd site && npm install && npm run dev    # try it locally
 ```
 Commit and push `site/public/data/photos.json` to publish: the GitHub Actions workflow builds the
 site and deploys it to GitHub Pages on every push to `main`. Re-run `build_index.py` and push again
 as `read_bibs.py` gets through more photos.
+
+`build_index.py` also works out how far each camera's clock is out, from runners whose numbers were
+read, and estimates when every finisher passed each place from their chip times. Runner pages list
+the photos taken within seconds of a runner passing the finish and the Mile 26 track, and link to
+the other albums at about the right moment.
 
 ## Albums
 | Album | Photos |

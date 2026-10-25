@@ -4,7 +4,11 @@ import { DownloadAllButton } from '../components/DownloadButtons'
 import { PhotoGrid } from '../components/PhotoGrid'
 import { trackEvent } from '../analytics'
 import { reportUrl } from '../config'
-import { confidenceFor, useIndex, type Album, type Photo } from '../data'
+import { confidenceFor, useIndex, type Album, type Photo, type Runner } from '../data'
+import { formatClock } from '../time'
+
+/** Places whose passing-time estimates are this close (in seconds) list their photos outright */
+const LIST_WITHIN = 30
 
 function byAlbum(photos: Photo[]): [Album, Photo[]][] {
   const groups = new Map<Album, Photo[]>()
@@ -36,6 +40,8 @@ export function RunnerPage() {
   const possible = photos.filter((p) => [0, 2].includes(confidenceFor(p, bib)))
   const partial = photos.filter((p) => confidenceFor(p, bib) === 1)
   const unsure = possible.length + partial.length
+  const passed = runner ? photosAsPassed(runner, photos) : []
+  const lookAround = runner ? placesToLook(runner, photos) : []
 
   return (
     <>
@@ -54,7 +60,7 @@ export function RunnerPage() {
         </div>
       </section>
 
-      {photos.length > 0 && (
+      {photos.length + passed.length > 0 && (
         <div className="actions">
           {confident.length > 0 && (
             <DownloadAllButton photos={confident} bib={bib} label={`Download ${photoCount(confident.length)} (zip)`} />
@@ -101,7 +107,7 @@ export function RunnerPage() {
       {photos.length === 0 && (
         <section className="empty">
           <p>
-            No photos found for {bib} yet. So far {index.processedCount.toLocaleString()} of{' '}
+            No photos with race number {bib} found yet. So far {index.processedCount.toLocaleString()} of{' '}
             {index.photos.size.toLocaleString()} photos have been checked for race numbers, and more are added as
             they're processed.
           </p>
@@ -114,8 +120,63 @@ export function RunnerPage() {
           </p>
         </section>
       )}
+
+      {passed.length > 0 && (
+        <>
+          <h2>Taken as you passed</h2>
+          <p className="note">
+            Your race number wasn't read in these, but they were taken within seconds of when you passed, worked out
+            from your chip time and the camera's clock. Other runners passing at the same moment are in them too.
+          </p>
+          <PhotoGroups photos={passed} bib={bib} />
+        </>
+      )}
+
+      {lookAround.length > 0 && (
+        <>
+          <h2>Look for yourself</h2>
+          <p className="note">
+            {photos.length + passed.length > 0 ? "You weren't found at these places, but from" : 'From'} your chip
+            time you probably passed them at about these times. Each opens the album at that moment: look a few minutes
+            either side.
+          </p>
+          <ul className="album-list">
+            {lookAround.map(({ label, album, time, photo }) => (
+              <li key={label}>
+                <Link to={`/album/${album.index}?at=${photo.id}`}>
+                  <span>{label}</span>
+                  <small>about {formatClock(time)}</small>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </>
+      )}
     </>
   )
+}
+
+/** Photos taken within seconds of the runner passing, at places where that can be worked out so closely. */
+function photosAsPassed(runner: Runner, listed: Photo[]): Photo[] {
+  const ids = new Set(listed.map((p) => p.id))
+  return runner.passing
+    .filter(({ point }) => point.window <= LIST_WITHIN)
+    .flatMap(({ point, time }) => point.album.photos.filter((p) => Math.abs(p.time - time) <= point.window))
+    .filter((p) => !ids.has(p.id))
+}
+
+/** Places the runner wasn't found, where the estimate is too rough to list photos, with the photo nearest it. */
+function placesToLook(runner: Runner, listed: Photo[]) {
+  return runner.passing
+    .filter(({ point, time }) => {
+      const near = Math.max(2 * point.window, 10 * 60)
+      return point.window > LIST_WITHIN && !listed.some((p) => p.album === point.album && Math.abs(p.time - time) <= near)
+    })
+    .map(({ point, time }) => ({
+      ...point,
+      time,
+      photo: point.album.photos.reduce((best, p) => (Math.abs(p.time - time) < Math.abs(best.time - time) ? p : best)),
+    }))
 }
 
 /**
