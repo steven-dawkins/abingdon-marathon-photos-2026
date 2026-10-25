@@ -779,6 +779,17 @@ main.wrap {
     flex-basis: 100%;
     font-size: 0.9rem;
   }
+
+  /* Their own row, split in two, so they always fit the screen */
+  .prev-next {
+    flex-basis: 100%;
+    margin-left: 0;
+  }
+
+  .prev-next > * {
+    flex: 1;
+    text-align: center;
+  }
 }
 
 /* Full-size photo overlay */
