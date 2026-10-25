@@ -65,6 +65,23 @@ export function PhotoPage() {
         {bib && <Link to={`/bib/${bib}`}>← Bib {bib}</Link>}
         <Link to={`/album/${photo.album.index}?at=${photo.id}`}>{photo.album.label}</Link>
         <span>{formatClock(photo.time)}</span>
+        {/* Above the photo, so they're on screen without scrolling */}
+        <span className="prev-next">
+          {prev ? (
+            <Link to={`/photo/${prev.id}${query}`} replace>
+              ← Previous
+            </Link>
+          ) : (
+            <span aria-hidden>← Previous</span>
+          )}
+          {next ? (
+            <Link to={`/photo/${next.id}${query}`} replace>
+              Next →
+            </Link>
+          ) : (
+            <span aria-hidden>Next →</span>
+          )}
+        </span>
       </nav>
 
       <figure onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
@@ -81,10 +98,6 @@ export function PhotoPage() {
             trackEvent('view-full-size')
           }}
         />
-        <div className="prev-next">
-          {prev ? <Link to={`/photo/${prev.id}${query}`} replace>← Previous</Link> : <span />}
-          {next ? <Link to={`/photo/${next.id}${query}`} replace>Next →</Link> : <span />}
-        </div>
       </figure>
 
       <div className="actions">
