@@ -2,8 +2,9 @@
 import { createContext, useContext } from 'react'
 
 /**
- * How sure we are a bib read belongs to the runner (see build_index.py): 3 number and name match,
- * 2 number matches, 1 name matches part of the number, 0 number isn't a finisher's.
+ * How sure we are a bib read belongs to the runner (see build_index.py): 3 number matches and the
+ * name does too or couldn't be read, 2 number matches but not the name, 1 name matches part of the
+ * number, 0 number isn't a finisher's.
  */
 export type Confidence = 0 | 1 | 2 | 3
 

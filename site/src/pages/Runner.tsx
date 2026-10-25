@@ -99,7 +99,7 @@ export function RunnerPage() {
           <h2>{confident.length ? `Possibly ${first}` : 'Possible matches'}</h2>
           <p className="note">
             {runner
-              ? `Race number ${bib} (or one very like it) was read in these photos, but the name on the bib couldn't be read or didn't match.`
+              ? `Race number ${bib} (or one very like it) was read in these photos, but the name read on the bib didn't match.`
               : 'This number was read in these photos.'}
           </p>
           <PhotoGroups photos={possible} bib={bib} />

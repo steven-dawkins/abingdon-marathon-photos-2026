@@ -25,10 +25,11 @@ export function About() {
       </p>
       <ul>
         <li>
-          <strong>Photos listed first</strong>: the number is a finisher's and the first name on the bib matches theirs.
+          <strong>Photos listed first</strong>: the number is a finisher's, and the first name on the bib matches
+          theirs or couldn't be read (names are often hidden or blurred).
         </li>
         <li>
-          <strong>Possibly</strong> (the runner's name): the number is a finisher's but the name couldn't be read or didn't match, or the number
+          <strong>Possibly</strong> (the runner's name): the number is a finisher's but the name read doesn't match, or the number
           was probably misread and is the closest finisher with that first name.
         </li>
         <li>

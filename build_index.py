@@ -10,8 +10,9 @@ compact JSON file for the front end. Re-run it whenever more photos have been pr
 not processed yet are still included, without bibs.
 
 Each bib read gets a confidence level:
-    3  the number is a finisher's and the first name read off the bib matches theirs
-    2  the number is a finisher's, but no name was read or it doesn't match
+    3  the number is a finisher's and the first name read off the bib matches theirs, or no name
+       could be read (names are often hidden or blurred where the number isn't)
+    2  the number is a finisher's, but the name read doesn't match theirs
     1  the number read is part of a finisher's number and the name matches theirs: the bib was
        partly hidden (e.g. "14 SARAH" -> 1425 when 1425 is Sarah)
     0  the number isn't any finisher's (a misread, or a runner who didn't finish)
@@ -96,9 +97,11 @@ def first_name(name):
 
 
 def same_name(read, official):
-    """The model often truncates or slightly misreads names, so compare the first 4 letters."""
+    """The model often truncates or slightly misreads names, so compare the first 4 letters, or
+    as many as both have when one is shorter ("ABI" for ABIGAIL, "ED" for EDWARD)."""
     read = re.sub(r"[^A-Z]", "", read.upper())
-    return bool(read) and bool(official) and read[:4] == official[:4]
+    n = min(4, len(read), len(official or ""))
+    return n >= 2 and read[:n] == official[:n]
 
 
 def one_digit_away(a, b):
@@ -112,8 +115,9 @@ def one_digit_away(a, b):
 
 
 def score_bibs(bibs, names, finishers):
-    """Return [[bib, confidence], ...] for one photo, correcting misread numbers where possible."""
-    scored = {}
+    """Return ([[bib, confidence], ...], {bibs whose name matched}) for one photo, correcting
+    misread numbers where possible."""
+    scored, named = {}, set()
 
     def add(bib, conf):
         scored[bib] = max(conf, scored.get(bib, 0))
@@ -121,6 +125,12 @@ def score_bibs(bibs, names, finishers):
     for bib, name in zip(bibs, names):
         official = finishers.get(bib)
         if official and same_name(name, official):
+            add(bib, 3)
+            named.add(bib)
+            continue
+        # The reader sometimes repeats the number where it couldn't read a name
+        name = re.sub(r"[^A-Z]", "", name.upper())
+        if official and not name:
             add(bib, 3)
             continue
         if name:
@@ -137,7 +147,7 @@ def score_bibs(bibs, names, finishers):
                 for b in partial:
                     add(b, 1)
         add(bib, 2 if official else 0)
-    return [[b, c] for b, c in scored.items()]
+    return [[b, c] for b, c in scored.items()], named
 
 
 def load_bibs(paths):
@@ -191,11 +201,11 @@ def load_chip_times(path):
                 for r in csv.DictReader(f)}
 
 
-def passing_times(photos, album_labels, chip_times):
+def passing_times(photos, named, album_labels, chip_times):
     """Estimate when each finisher passed each place on the course, by the camera's clock there.
 
     An even pace between the runner's chip start and finish times gives a first guess. Runners
-    matched by number and name (confidence 3) at a place show how far out that guess is there,
+    matched by number and name at a place (named: photo id -> bibs) show how far out that guess is there,
     which covers both the camera's clock being off and how runners really pace themselves. So each
     runner's guess is corrected by the median error of the NEIGHBOURS matched runners with the
     nearest finish times. Places with fewer than MIN_MATCHES matched runners get no estimates.
@@ -208,8 +218,8 @@ def passing_times(photos, album_labels, chip_times):
     # Times each matched runner was photographed at each place
     seen = {}
     for p in photos:
-        for bib, conf in p.get("b", []):
-            if conf < 3 or bib not in chip_times:
+        for bib in named.get(p["id"], ()):
+            if bib not in chip_times:
                 continue
             start, finish = chip_times[bib]
             # Where an album covers two places, the one nearer an even pace is the one they were at
@@ -279,7 +289,7 @@ def main():
     albums.sort(key=lambda a: COURSE_ORDER.index(album_label(a[1])))
 
     owner = albums[0][2]
-    photos = []
+    photos, named = [], {}
     for index, (album_id, title, _, album_photos) in enumerate(albums):
         entries = []
         for p in album_photos:
@@ -292,7 +302,7 @@ def main():
                 "t": seconds_since_start(p["datetaken"]),
             }
             if p["id"] in read:
-                bibs = score_bibs(*read[p["id"]], finishers)
+                bibs, named[p["id"]] = score_bibs(*read[p["id"]], finishers)
                 entry["r"] = 1  # processed by read_bibs.py, even if no bibs were found
                 if bibs:
                     entry["b"] = bibs
@@ -300,7 +310,7 @@ def main():
         photos += sorted(entries, key=lambda e: (e["t"], e["id"]))
 
     print("Estimating when each runner passed each place")
-    points, estimates = passing_times(photos, [album_label(a[1]) for a in albums], load_chip_times(args.results))
+    points, estimates = passing_times(photos, named, [album_label(a[1]) for a in albums], load_chip_times(args.results))
     for runner in runners:
         if any(t is not None for t in estimates[runner["bib"]]):
             runner["e"] = estimates[runner["bib"]]
