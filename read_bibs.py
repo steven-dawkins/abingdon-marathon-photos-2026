@@ -231,10 +231,10 @@ def main():
                         help="also send N overlapping close-up strips per photo: finds some smaller bibs, "
                              "but ~5x slower and adds more misreads (try 2)")
     parser.add_argument("--limit", type=int, help="only process this many new photos (for testing)")
-    parser.add_argument("--max-temp", type=int, default=70,
-                        help="pause when the GPU gets hotter than this (C, default 75)")
-    parser.add_argument("--resume-temp", type=int, default=60,
-                        help="after pausing, wait until the GPU has cooled to this (C, default 65)")
+    parser.add_argument("--max-temp", type=int, default=80,
+                        help="pause when the GPU gets hotter than this (C, default 80)")
+    parser.add_argument("--resume-temp", type=int, default=72,
+                        help="after pausing, wait until the GPU has cooled to this (C, default 72)")
     parser.add_argument("--rest", type=float, default=3,
                         help="seconds to pause after every photo, to run cooler overall (default 0)")
     parser.add_argument("--out", default="bibs.csv")

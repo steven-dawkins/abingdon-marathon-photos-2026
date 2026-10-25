@@ -14,7 +14,7 @@ python read_bibs_2pass.py --skip bibs.csv   # recommended: finds runners first, 
 python read_bibs.py --limit 50           # quick accuracy/speed check first
 python read_bibs.py                      # full run -> bibs.csv and by_bib.csv
 python read_bibs.py --tiles 2 --out bibs_tiles.csv   # slower close-up pass, see below
-python read_bibs.py --max-temp 70 --resume-temp 60 --rest 3   # run cooler, see Speed
+python read_bibs.py --max-temp 70 --resume-temp 60 --rest 3   # run cooler (and slower), see Speed
 python compare_bibs.py bibs.csv bibs_new.csv   # agreement and speed of two runs on the same photos
 ```
 Both scripts can be stopped and re-run at any time: photos already downloaded / already in
@@ -124,8 +124,9 @@ have already been processed. The GPU slows down when it gets hot: keep the lapto
 "Performance" profile and on the charger. The script prints a time-remaining estimate after every photo.
 
 To keep the laptop from running hot for hours, `read_bibs.py` checks the GPU temperature with
-`nvidia-smi` before each photo. Above `--max-temp` (default 75°C) it pauses until the GPU is down
-to `--resume-temp` (default 65°C), giving up waiting after 15 minutes. `--rest N` adds N seconds
+`nvidia-smi` before each photo. Above `--max-temp` (default 80°C) it pauses until the GPU is down
+to `--resume-temp` (default 72°C), giving up waiting after 15 minutes. With 70°C / 60°C the GPU spent
+about three-quarters of the time cooling down (it reached 70°C within a minute of work). `--rest N` adds N seconds
 after every photo, so the GPU runs cooler all the time: with photos taking ~4 s, `--rest 4` roughly
 halves the heat and doubles the run time.
 

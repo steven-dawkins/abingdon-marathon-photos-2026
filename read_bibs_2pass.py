@@ -143,10 +143,10 @@ def main():
                         help="photos sent to the model at once (default 1). The slots share llama-server's "
                              "-c, so 4 crowded sheets overflow -c 8192. 2 workers were ~1.5x faster "
                              "between thermal pauses but heat the GPU faster: ~10%% more photos/hour")
-    parser.add_argument("--max-temp", type=int, default=70,
-                        help="pause when the GPU gets hotter than this (C, default 70)")
-    parser.add_argument("--resume-temp", type=int, default=60,
-                        help="after pausing, wait until the GPU has cooled to this (C, default 60)")
+    parser.add_argument("--max-temp", type=int, default=80,
+                        help="pause when the GPU gets hotter than this (C, default 80)")
+    parser.add_argument("--resume-temp", type=int, default=72,
+                        help="after pausing, wait until the GPU has cooled to this (C, default 72)")
     parser.add_argument("--rest", type=float, default=0,
                         help="seconds to pause after every photo, to run cooler overall (default 0)")
     parser.add_argument("--out", default="bibs_2pass.csv")
