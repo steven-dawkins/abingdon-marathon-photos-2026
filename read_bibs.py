@@ -278,11 +278,12 @@ def main():
                 "flickr_url": row["flickr_url"], "seconds": f"{secs:.1f}",
             })
             f.flush()
-            eta = (time.time() - started) / i * (len(todo) - i) / 3600
+            rate = i / (time.time() - started) * 3600  # photos/hour so far, including thermal pauses
             summary = ", ".join(f"{b} {n}".strip() for b, n in found.items()) or "none"
             taken = taken_at(path)
             print(f"[{i}/{len(todo)}] {row['album']}/{path.name}{f' @ {taken}' if taken else ''}: "
-                  f"{summary} ({secs:.1f}s, ~{eta:.1f}h left)")
+                  f"{summary} ({secs:.1f}s, {rate:.0f} photos/h, ~{(len(todo) - i) / rate:.1f}h left)",
+                  flush=True)
             if args.rest:
                 time.sleep(args.rest)
 

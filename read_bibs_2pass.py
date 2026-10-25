@@ -231,11 +231,12 @@ def write_row(writer, f, row, crops, found, secs, path, i, total, started):
         "flickr_url": row["flickr_url"], "seconds": f"{secs:.1f}",
     })
     f.flush()
-    eta = (time.time() - started) / i * (total - i) / 3600
+    rate = i / (time.time() - started) * 3600  # photos/hour so far, including thermal pauses
     summary = ", ".join(f"{b} {n}".strip() for b, n in found.items()) or "none"
     taken = taken_at(path)
     print(f"[{i}/{total}] {row['album']}/{path.name}{f' @ {taken}' if taken else ''}: "
-          f"{summary} ({len(crops)} runners, {secs:.1f}s, ~{eta:.1f}h left)", flush=True)
+          f"{summary} ({len(crops)} runners, {secs:.1f}s, {rate:.0f} photos/h, "
+          f"~{(total - i) / rate:.1f}h left)", flush=True)
 
 
 if __name__ == "__main__":
