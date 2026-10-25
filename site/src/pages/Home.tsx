@@ -21,6 +21,9 @@ export function Home() {
           numbers so far; <strong>{runnersWithPhotos}</strong> of {index.runners.size.toLocaleString()} finishers found.
           More are added as they're processed, so if you're not found yet, check back or browse the photos below.
         </p>
+        <p>
+          <Link to="/stats">Race stats</Link>: finish times, and results by gender, age group and club.
+        </p>
       </section>
 
       <section>

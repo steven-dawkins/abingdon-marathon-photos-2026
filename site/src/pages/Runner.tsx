@@ -5,6 +5,7 @@ import { PhotoGrid } from '../components/PhotoGrid'
 import { trackEvent } from '../analytics'
 import { reportUrl } from '../config'
 import { confidenceFor, useIndex, type Album, type Photo, type Runner } from '../data'
+import { ordinal, placings } from '../stats'
 import { formatClock } from '../time'
 
 /** Places whose passing-time estimates are this close (in seconds) list their photos outright */
@@ -50,10 +51,20 @@ export function RunnerPage() {
         <div>
           <h1>{runner?.name ?? `Race number ${bib}`}</h1>
           {runner ? (
-            <p>
-              {runner.club && <>{runner.club} · </>}
-              {runner.time} · {ordinal(runner.pos)} of {index.runners.size}
-            </p>
+            <>
+              <p>
+                {runner.club && <>{runner.club} · </>}
+                {runner.time} · {ordinal(runner.pos)} of {index.runners.size}
+              </p>
+              <p className="placings">
+                {placings(runner, [...index.runners.values()]).map(({ label, place, of }) => (
+                  <span key={label}>
+                    {ordinal(place)} of {of} {label}
+                  </span>
+                ))}
+                <Link to={`/stats?bib=${bib}`}>Race stats →</Link>
+              </p>
+            </>
           ) : (
             <p>Not in the official results: this number may have been misread from a photo.</p>
           )}
@@ -205,8 +216,3 @@ function ShareButton({ bib, title }: { bib: string; title: string }) {
 }
 
 const photoCount = (n: number) => `${n} photo${n === 1 ? '' : 's'}`
-
-function ordinal(n: number): string {
-  const suffix = n % 100 >= 11 && n % 100 <= 13 ? 'th' : ['th', 'st', 'nd', 'rd'][n % 10] ?? 'th'
-  return `${n}${suffix}`
-}

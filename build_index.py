@@ -156,10 +156,26 @@ def load_bibs(paths):
     return found
 
 
+def age_group(age):
+    """Age group for the stats: ages themselves aren't published."""
+    if age < 35:
+        return "Under 35"
+    if age >= 70:
+        return "70+"
+    return f"{age // 5 * 5}–{age // 5 * 5 + 4}"
+
+
+def club_name(club):
+    """Entries typed in lower case, or with stray spaces, would otherwise split a club in two."""
+    club = re.sub(r"\s+", " ", club).strip()
+    return club.title() if club.islower() else club
+
+
 def load_runners(path):
     with open(path, newline="", encoding="utf-8") as f:
-        return [{"bib": r["bib"], "name": r["name"], "club": r["club"] or None,
-                 "time": r["chip_time"], "pos": int(r["position"])} for r in csv.DictReader(f)]
+        return [{"bib": r["bib"], "name": r["name"], "club": club_name(r["club"]) or None,
+                 "time": r["chip_time"], "pos": int(r["position"]), "g": r["gender"],
+                 "ag": age_group(int(r["age"]))} for r in csv.DictReader(f)]
 
 
 def seconds_since_start(date_taken):

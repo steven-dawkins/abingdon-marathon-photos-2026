@@ -9,6 +9,7 @@ import { RunnerPage } from './pages/Runner'
 import { PhotoPage } from './pages/Photo'
 import { AlbumPage } from './pages/Album'
 import { About } from './pages/About'
+import { StatsPage } from './pages/Stats'
 
 /** Scroll to the top and count a page view on every page change. */
 function OnNavigate() {
@@ -47,7 +48,7 @@ function Layout({ children }: { children: React.ReactNode }) {
             <a href={reportUrl({})} target="_blank" rel="noreferrer">
               Report a wrong or missing photo
             </a>
-            . <Link to="/about">About this site</Link>
+            . <Link to="/stats">Race stats</Link> · <Link to="/about">About this site</Link>
           </p>
         </div>
       </footer>
@@ -78,6 +79,7 @@ export default function App() {
               <Route path="/photo/:id" element={<PhotoPage />} />
               <Route path="/album/:album" element={<AlbumPage />} />
               <Route path="/about" element={<About />} />
+              <Route path="/stats" element={<StatsPage />} />
               <Route path="*" element={<p className="empty">Page not found.</p>} />
             </Routes>
           </Layout>

@@ -26,6 +26,8 @@ interface RawRunner {
   club: string | null
   time: string
   pos: number
+  g: Gender
+  ag: string
   /** Estimated time passing each of RawIndex.points, by the camera's clock there */
   e?: (number | null)[]
 }
@@ -45,6 +47,8 @@ export interface Album {
   label: string
   photos: Photo[] // in time order
 }
+export type Gender = 'M' | 'F' | 'NB'
+
 /** A place on the course where photos were taken. The "Miles 11 & 19.5" album has two. */
 export interface CoursePoint {
   album: Album
@@ -58,6 +62,9 @@ export interface Runner {
   club: string | null
   time: string
   pos: number
+  gender: Gender
+  /** "Under 35", "35–39", … "70+" */
+  ageGroup: string
   /** When the runner probably passed each place, worked out from their chip times (see build_index.py) */
   passing: { point: CoursePoint; time: number }[]
 }
@@ -123,8 +130,10 @@ export async function loadIndex(): Promise<PhotoIndex> {
   }
 
   const points: CoursePoint[] = (raw.points ?? []).map((p) => ({ album: albums[p.a], label: p.label, window: p.w }))
-  const runners = raw.runners.map(({ e, ...r }): Runner => ({
+  const runners = raw.runners.map(({ e, g, ag, ...r }): Runner => ({
     ...r,
+    gender: g,
+    ageGroup: ag,
     passing: (e ?? []).flatMap((time, i) => (time === null ? [] : [{ point: points[i], time }])),
   }))
 
