@@ -14,6 +14,7 @@ python read_bibs.py --limit 50           # quick accuracy/speed check first
 python read_bibs.py                      # full run -> bibs.csv and by_bib.csv
 python read_bibs.py --tiles 2 --out bibs_tiles.csv   # slower close-up pass, see below
 python read_bibs.py --max-temp 70 --resume-temp 60 --rest 3   # run cooler, see Speed
+python compare_bibs.py bibs.csv bibs_new.csv   # agreement and speed of two runs on the same photos
 ```
 Both scripts can be stopped and re-run at any time: photos already downloaded / already in
 `bibs.csv` are skipped. `read_bibs.py` only processes photos that are already downloaded, so it
