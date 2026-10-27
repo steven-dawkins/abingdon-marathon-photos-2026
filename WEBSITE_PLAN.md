@@ -81,7 +81,7 @@ interface Photo {
   k: string;                         // secret for q/n/z/b sizes
   ok: string;                        // secret for the original
   w: number; h: number;              // original size (layout without reflow, and the download label)
-  t: number;                         // time taken, seconds since race start (camera clock, see risks)
+  t: number;                         // time taken, seconds since race start (camera clock, corrected for finish albums, see risks)
   r?: 1;                             // checked by read_bibs.py (even if no bibs were found)
   b?: [bib: string, conf: 0 | 1 | 2 | 3][];  // bibs read; 3 = number + name match, 2 = finisher's number or corrected,
                                             // 1 = name matches, number read is part of theirs, 0 = unknown number
@@ -185,8 +185,9 @@ abingdon_marathon_photos/
   knows to come back (or browse the albums).
 - **Camera clocks (checked 2026-10-25 against finish times):** Finish a is about 170 s fast and
   Finish c about 1 h 52 min slow. Finish b and Mile 26 photos are taken 65–95 s before runners cross
-  the line, so those cameras are on the course or nearly right. Album pages still show the cameras'
-  own times, so Finish c's "Jump to" times are wrong.
+  the line, so those cameras are on the course or nearly right. `build_index.py` corrects finish albums
+  more than 2 minutes out (Finish a and c) by the median gap to the matched runners' finish times, and
+  album pages say so.
 - If a photographer replaces or re-uploads photos on Flickr, their secrets change and the
   links break: re-run `build_index.py`.
 - The Flickr site key `download_album.py` scrapes is only used at build time. It is never

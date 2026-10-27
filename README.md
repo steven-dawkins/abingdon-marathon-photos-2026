@@ -43,8 +43,8 @@ site and deploys it to GitHub Pages on every push to `main`. Re-run `build_index
 as `read_bibs.py` gets through more photos.
 
 `build_index.py` also works out how far each camera's clock is out, from runners whose numbers were
-read, and estimates when every finisher passed each place from their chip times. Runner pages list
-the photos taken within seconds of a runner passing the finish and the Mile 26 track, and link to
+read, corrects the photo times of finish albums whose clocks are clearly wrong (Finish a and c), and
+estimates when every finisher passed each place from their chip times. Runner pages list the photos taken within seconds of a runner passing the finish and the Mile 26 track, and link to
 the other albums at about the right moment.
 
 ## Albums

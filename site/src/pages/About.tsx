@@ -43,7 +43,8 @@ export function About() {
         on a runner's page opens it at the moment they were photographed there.
       </p>
       <p>
-        Runners whose numbers were read show how far each camera's clock is out. With that and their chip times, each
+        Runners whose numbers were read show how far each camera's clock is out. One finish camera was about 3 minutes
+        fast and another nearly 2 hours slow, so their photo times have been corrected. With that and their chip times, each
         runner's page also lists <strong>photos taken as they passed</strong> the finish and the track at Mile 26, to
         within a few seconds, even where their number couldn't be read. Out on the course, where runners' paces vary
         more, it links to each album at about the time they passed instead.

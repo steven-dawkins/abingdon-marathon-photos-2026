@@ -51,7 +51,7 @@ function AlbumView({ album, at }: { album: Album; at?: string }) {
     <>
       <h1>{album.label}</h1>
       <p className="note">
-        {album.photos.length.toLocaleString()} photos in the order they were taken. Times are from the camera's clock.{' '}
+        {album.photos.length.toLocaleString()} photos in the order they were taken. {clockNote(album.clockCorrection)}{' '}
         <a href={albumPageUrl(index.owner, album)} target="_blank" rel="noreferrer">
           Album on Flickr
         </a>
@@ -94,6 +94,13 @@ function AlbumView({ album, at }: { album: Album; at?: string }) {
       <div ref={sentinel} />
     </>
   )
+}
+
+function clockNote(correction?: number): string {
+  if (!correction) return "Times are from the camera's clock."
+  const minutes = Math.round(Math.abs(correction) / 60)
+  const amount = minutes < 1 ? `${Math.abs(correction)} seconds` : minutes < 60 ? `${minutes} minutes` : `${Math.floor(minutes / 60)} h ${minutes % 60} min`
+  return `The camera's clock was about ${amount} ${correction > 0 ? 'fast' : 'slow'}, so times have been corrected to match runners' official finish times.`
 }
 
 function initialRange(position: number): [number, number] {

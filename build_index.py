@@ -21,9 +21,10 @@ Each bib read gets a confidence level:
 A number read with a name that isn't its finisher's keeps confidence 3 (or 0), and the finishers
 inferred from the name are added alongside it.
 
-It also estimates when each finisher passed each place on the course, by the camera's clock
-there (see passing_times), so the site can show photos taken as a runner passed even when their
-bib couldn't be read.
+Some cameras' clocks are well out, so photo times in finish-line albums are corrected to the
+official finish times of the runners in them (see clock_corrections). It also estimates when each
+finisher passed each place on the course (see passing_times), so the site can show photos taken as
+a runner passed even when their bib couldn't be read.
 """
 
 import argparse
@@ -56,6 +57,10 @@ COURSE_POINTS = [("Start", "Start", 0), ("Mile 5", "Mile 5", 5),
                  ("Finish a", "Finish a", MARATHON_MILES), ("Finish b", "Finish b", MARATHON_MILES),
                  ("Finish c", "Finish c", MARATHON_MILES)]
 MIN_MATCHES = 20  # runners matched at a place before its camera clock is trusted
+# A finish-line album whose photos are further out than this from the finish times of the runners in
+# them has its clock corrected. Finish b's photographer stood on the run-in for a while, taking photos
+# 70-100 s before runners crossed the line, so its clock is right although its median is ~80 s out
+CLOCK_TOLERANCE = 120
 NEIGHBOURS = 15  # matched runners with the nearest finish times used to correct each estimate
 NEIGHBOUR_RANGE = 30 * 60  # ...as long as they finished within this many seconds of the runner
 MIN_NEIGHBOURS = 5
@@ -198,6 +203,26 @@ def load_chip_times(path):
                 for r in csv.DictReader(f)}
 
 
+def clock_corrections(photos, named, album_labels, chip_times):
+    """Album index -> seconds its camera's clock is fast (negative: slow), for finish-line albums
+    whose clocks are clearly out: the median of photo time minus finish time over runners matched by
+    number and name. The few seconds between a photo and the runner crossing the line are ignored.
+    Albums out on the course are left alone: there the gap is mostly the runners' own pacing."""
+    gaps = {}
+    for p in photos:
+        if album_labels[p["a"]].startswith("Finish"):
+            gaps.setdefault(p["a"], []).extend(p["t"] - chip_times[bib][1]
+                                               for bib in named.get(p["id"], ()) if bib in chip_times)
+    corrections = {}
+    for a, album_gaps in gaps.items():
+        offset = round(statistics.median(album_gaps)) if len(album_gaps) >= MIN_MATCHES else 0
+        print(f"  {album_labels[a]}: {len(album_gaps)} matches, photos {offset:+} s from the runners' finish times"
+              + (", correcting the clock" if abs(offset) > CLOCK_TOLERANCE else ""))
+        if abs(offset) > CLOCK_TOLERANCE:
+            corrections[a] = offset
+    return corrections
+
+
 def passing_times(photos, named, album_labels, chip_times):
     """Estimate when each finisher passed each place on the course, by the camera's clock there.
 
@@ -306,8 +331,15 @@ def main():
             entries.append(entry)
         photos += sorted(entries, key=lambda e: (e["t"], e["id"]))
 
+    labels = [album_label(a[1]) for a in albums]
+    chip_times = load_chip_times(args.results)
+    print("Checking the finish cameras' clocks")
+    corrections = clock_corrections(photos, named, labels, chip_times)
+    for p in photos:
+        p["t"] -= corrections.get(p["a"], 0)  # the same shift for a whole album keeps its order
+
     print("Estimating when each runner passed each place")
-    points, estimates = passing_times(photos, named, [album_label(a[1]) for a in albums], load_chip_times(args.results))
+    points, estimates = passing_times(photos, named, labels, chip_times)
     for runner in runners:
         if any(t is not None for t in estimates[runner["bib"]]):
             runner["e"] = estimates[runner["bib"]]
@@ -315,7 +347,9 @@ def main():
     index = {
         "generated": datetime.now(timezone.utc).isoformat(timespec="seconds"),
         "owner": owner,
-        "albums": [{"id": a[0], "title": a[1].strip(), "label": album_label(a[1])} for a in albums],
+        # c: seconds the camera's clock was fast (negative: slow), where photo times were corrected
+        "albums": [{"id": a[0], "title": a[1].strip(), "label": album_label(a[1]),
+                    **({"c": corrections[i]} if i in corrections else {})} for i, a in enumerate(albums)],
         "points": points,
         "runners": runners,
         "photos": photos,
