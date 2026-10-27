@@ -28,13 +28,13 @@ interface RawRunner {
   pos: number
   g: Gender
   ag: string
-  /** Estimated time passing each of RawIndex.points, by the camera's clock there */
+  /** Estimated time passing each of RawIndex.points */
   e?: (number | null)[]
 }
 interface RawIndex {
   generated: string
   owner: string
-  albums: { id: string; title: string; label: string }[]
+  albums: { id: string; title: string; label: string; c?: number }[]
   points?: { a: number; label: string; w: number }[]
   runners: RawRunner[]
   photos: RawPhoto[]
@@ -45,6 +45,8 @@ export interface Album {
   id: string
   title: string
   label: string
+  /** Seconds the camera's clock was fast (negative: slow), where the photo times have been corrected */
+  clockCorrection?: number
   photos: Photo[] // in time order
 }
 export type Gender = 'M' | 'F' | 'NB'
@@ -78,7 +80,7 @@ export interface Photo {
   originalSecret: string
   width: number
   height: number
-  /** Seconds since the race start, by the camera's clock */
+  /** Seconds since the race start, by the camera's clock, corrected where it was out */
   time: number
   /** Whether the bib reader has looked at this photo yet */
   processed: boolean
@@ -100,7 +102,7 @@ export async function loadIndex(): Promise<PhotoIndex> {
   if (!resp.ok) throw new Error(`Could not load the photo index (${resp.status})`)
   const raw: RawIndex = await resp.json()
 
-  const albums: Album[] = raw.albums.map((a, index) => ({ ...a, index, photos: [] }))
+  const albums: Album[] = raw.albums.map(({ c, ...a }, index) => ({ ...a, index, clockCorrection: c, photos: [] }))
   const photos = new Map<string, Photo>()
   const photosByBib = new Map<string, Photo[]>()
   let processedCount = 0
