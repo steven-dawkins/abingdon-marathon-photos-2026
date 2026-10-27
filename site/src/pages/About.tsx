@@ -21,11 +21,12 @@ export function About() {
       <h2>How photos are matched</h2>
       <p>
         A computer vision model read the race number and first name on every bib it could see. Each number was then
-        checked against the official results:
+        checked against the official results. The photos' tags on Flickr list the race numbers in them too, and
+        those are used alongside:
       </p>
       <ul>
         <li>
-          <strong>Photos listed first</strong>: the number is a finisher's. The first name on the bib isn't needed
+          <strong>Photos listed first</strong>: the number read or tagged is a finisher's. The first name on the bib isn't needed
           to match, as names are often hidden, blurred or misread.
         </li>
         <li>

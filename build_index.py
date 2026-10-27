@@ -19,7 +19,9 @@ Each bib read gets a confidence level:
        finishers one digit away; up to MAX_PARTIAL finishers
     0  the number isn't any finisher's (a misread, or a runner who didn't finish)
 A number read with a name that isn't its finisher's keeps confidence 3 (or 0), and the finishers
-inferred from the name are added alongside it.
+inferred from the name are added alongside it. The photos' Flickr tags are race numbers too, added
+when the photos were uploaded: a finisher's number in the tags also gets confidence 3, whatever
+the bib readers found. Tags that aren't a finisher's number are left out.
 
 Some cameras' clocks are well out, so photo times in finish-line albums are corrected to the
 official finish times of the runners in them (see clock_corrections). It also estimates when each
@@ -81,7 +83,7 @@ def list_album(session, url):
             "api_key": api_key,
             "photoset_id": album_id,
             "user_id": user_id,
-            "extras": "original_format,date_taken,url_z",
+            "extras": "original_format,date_taken,url_z,tags",
             "per_page": 500,
             "page": page,
             "format": "json",
@@ -150,6 +152,15 @@ def score_bibs(bibs, names, finishers):
             for b in partial:
                 add(b, 1)
     return [[b, c] for b, c in scored.items()], named
+
+
+def add_tagged(bibs, tags, finishers):
+    """Add the finishers' numbers among a photo's Flickr tags to its scored bibs, at confidence 3."""
+    scored = dict(bibs)
+    for tag in tags.split():
+        if tag in finishers:
+            scored[tag] = 3
+    return [[b, c] for b, c in scored.items()]
 
 
 def load_bibs(paths):
@@ -311,7 +322,7 @@ def main():
     albums.sort(key=lambda a: COURSE_ORDER.index(album_label(a[1])))
 
     owner = albums[0][2]
-    photos, named = [], {}
+    photos, named, tag_only = [], {}, 0
     for index, (album_id, title, _, album_photos) in enumerate(albums):
         entries = []
         for p in album_photos:
@@ -323,11 +334,15 @@ def main():
                 "w": p["width_z"], "h": p["height_z"],
                 "t": seconds_since_start(p["datetaken"]),
             }
+            bibs = []
             if p["id"] in read:
                 bibs, named[p["id"]] = score_bibs(*read[p["id"]], finishers)
                 entry["r"] = 1  # processed by read_bibs.py, even if no bibs were found
-                if bibs:
-                    entry["b"] = bibs
+            read_finishers = sum(1 for _, c in bibs if c == 3)
+            bibs = add_tagged(bibs, p["tags"], finishers)
+            tag_only += sum(1 for _, c in bibs if c == 3) - read_finishers
+            if bibs:
+                entry["b"] = bibs
             entries.append(entry)
         photos += sorted(entries, key=lambda e: (e["t"], e["id"]))
 
@@ -364,7 +379,7 @@ def main():
     partial = sum(1 for p in photos for _, c in p.get("b", []) if c == 1)
     print(f"Wrote {out} ({out.stat().st_size / 1e6:.1f} MB): {len(photos)} photos, {processed} processed, "
           f"{confident} confident bib matches, {partial} partial-number matches, "
-          f"{len(found)} of {len(runners)} finishers have a photo")
+          f"{len(found)} of {len(runners)} finishers have a photo; {tag_only} matches only from Flickr tags")
 
 
 if __name__ == "__main__":
