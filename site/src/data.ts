@@ -94,7 +94,6 @@ export interface PhotoIndex {
   runners: Map<string, Runner>
   /** Every bib read in any photo, with the photos it was read in */
   photosByBib: Map<string, Photo[]>
-  processedCount: number
 }
 
 export async function loadIndex(): Promise<PhotoIndex> {
@@ -105,7 +104,6 @@ export async function loadIndex(): Promise<PhotoIndex> {
   const albums: Album[] = raw.albums.map(({ c, ...a }, index) => ({ ...a, index, clockCorrection: c, photos: [] }))
   const photos = new Map<string, Photo>()
   const photosByBib = new Map<string, Photo[]>()
-  let processedCount = 0
   for (const p of raw.photos) {
     const album = albums[p.a]
     const photo: Photo = {
@@ -123,7 +121,6 @@ export async function loadIndex(): Promise<PhotoIndex> {
     }
     album.photos.push(photo)
     photos.set(photo.id, photo)
-    if (photo.processed) processedCount++
     for (const { bib } of photo.bibs) {
       const list = photosByBib.get(bib) ?? []
       list.push(photo)
@@ -146,7 +143,6 @@ export async function loadIndex(): Promise<PhotoIndex> {
     photos,
     runners: new Map(runners.map((r) => [r.bib, r])),
     photosByBib,
-    processedCount,
   }
 }
 

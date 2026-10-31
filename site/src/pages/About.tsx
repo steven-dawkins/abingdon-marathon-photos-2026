@@ -51,8 +51,7 @@ export function About() {
         more, it links to each album at about the time they passed instead.
       </p>
       <p>
-        So far {index.processedCount.toLocaleString()} of {index.photos.size.toLocaleString()} photos have been checked,
-        and more are added as they're processed. Last updated {index.generated.toLocaleDateString('en-GB', {
+        All {index.photos.size.toLocaleString()} photos have been checked. Last updated {index.generated.toLocaleDateString('en-GB', {
           day: 'numeric',
           month: 'long',
           year: 'numeric',

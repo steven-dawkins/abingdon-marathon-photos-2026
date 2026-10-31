@@ -17,9 +17,9 @@ export function Home() {
 
       <section className="stats">
         <p>
-          <strong>{index.processedCount.toLocaleString()}</strong> of {total.toLocaleString()} photos checked for race
-          numbers so far; <strong>{runnersWithPhotos}</strong> of {index.runners.size.toLocaleString()} finishers found.
-          More are added as they're processed, so if you're not found yet, check back or browse the photos below.
+          <strong>{total.toLocaleString()}</strong> photos checked for race numbers;{' '}
+          <strong>{runnersWithPhotos}</strong> of {index.runners.size.toLocaleString()} finishers found. If you're not
+          found, browse the photos below.
         </p>
         <p>
           <Link to="/stats">Race stats</Link>: finish times, and results by gender, age group and club.

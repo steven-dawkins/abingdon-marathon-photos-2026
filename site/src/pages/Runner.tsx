@@ -118,12 +118,11 @@ export function RunnerPage() {
       {photos.length === 0 && (
         <section className="empty">
           <p>
-            No photos with race number {bib} found yet. So far {index.processedCount.toLocaleString()} of{' '}
-            {index.photos.size.toLocaleString()} photos have been checked for race numbers, and more are added as
-            they're processed.
+            No photos with race number {bib} found. All {index.photos.size.toLocaleString()} photos have been checked
+            for race numbers, but a number can't be read if it's hidden, turned away or blurred.
           </p>
           <p>
-            In the meantime you can <Link to="/">browse the photos by place on the course</Link>, or{' '}
+            You can still <Link to="/">browse the photos by place on the course</Link>, or{' '}
             <a href={reportUrl({ bib })} target="_blank" rel="noreferrer">
               tell us about a photo of {first}
             </a>
