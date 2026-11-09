@@ -38,6 +38,9 @@ export function groupStats(runners: Runner[]): GroupStats | null {
   return { count: runners.length, median, fastest }
 }
 
+/** The club page's path */
+export const clubPath = (club: string) => `/club/${encodeURIComponent(club)}`
+
 export function genderPlural(gender: Gender): string {
   return GENDERS.find((g) => g.gender === gender)?.plural ?? 'runners'
 }

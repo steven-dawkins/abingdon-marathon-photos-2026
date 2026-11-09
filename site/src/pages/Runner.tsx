@@ -6,7 +6,7 @@ import { trackEvent } from '../analytics'
 import { reportUrl } from '../config'
 import { confidenceFor, firstName, useIndex, type Album, type Photo, type Runner } from '../data'
 import { LIST_WITHIN, photosAsPassed } from '../passing'
-import { ordinal, placings } from '../stats'
+import { clubPath, ordinal, placings } from '../stats'
 import { formatClock } from '../time'
 
 function byAlbum(photos: Photo[]): [Album, Photo[]][] {
@@ -53,7 +53,7 @@ export function RunnerPage() {
           {runner ? (
             <>
               <p>
-                {runner.club && <>{runner.club} · </>}
+                {runner.club && <><Link to={clubPath(runner.club)}>{runner.club}</Link> · </>}
                 {runner.time} · {ordinal(runner.pos)} of {index.runners.size}
               </p>
               <p className="placings">
