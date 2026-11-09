@@ -11,6 +11,7 @@ import { PhotoPage } from './pages/Photo'
 import { AlbumPage } from './pages/Album'
 import { About } from './pages/About'
 import { StatsPage } from './pages/Stats'
+import { ClubPage } from './pages/Club'
 
 /** Scroll to the top and count a page view on every page change. */
 function OnNavigate() {
@@ -82,6 +83,7 @@ export default function App() {
               <Route path="/album/:album" element={<AlbumPage />} />
               <Route path="/about" element={<About />} />
               <Route path="/stats" element={<StatsPage />} />
+              <Route path="/club/:club" element={<ClubPage />} />
               <Route path="*" element={<p className="empty">Page not found.</p>} />
             </Routes>
           </Layout>

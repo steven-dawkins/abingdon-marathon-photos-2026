@@ -1,7 +1,7 @@
 import { Link, useSearchParams } from 'react-router-dom'
 import { FinishHistogram } from '../components/FinishHistogram'
 import { useIndex, type Runner } from '../data'
-import { AGE_GROUPS, GENDERS, formatDuration, groupStats, parseDuration, type GroupStats } from '../stats'
+import { AGE_GROUPS, GENDERS, clubPath, formatDuration, groupStats, parseDuration, type GroupStats } from '../stats'
 
 const MIN_CLUB = 3
 const ROUND_TIMES = [3, 3.5, 4, 4.5, 5].map((h) => h * 3600)
@@ -142,7 +142,9 @@ export function StatsPage() {
           <tbody>
             {bigClubs.map(({ club, ...stats }) => (
               <tr key={club} className={you?.club === club ? 'yours' : undefined}>
-                <th>{club}</th>
+                <th>
+                  <Link to={clubPath(club)}>{club}</Link>
+                </th>
                 <StatCells stats={stats} />
               </tr>
             ))}
@@ -153,7 +155,7 @@ export function StatsPage() {
   )
 }
 
-function Tile({ label, value, children }: { label: string; value: string; children?: React.ReactNode }) {
+export function Tile({ label, value, children }: { label: string; value: string; children?: React.ReactNode }) {
   return (
     <div className="tile">
       <span className="tile-label">{label}</span>
